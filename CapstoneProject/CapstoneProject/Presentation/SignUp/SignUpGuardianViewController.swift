@@ -11,7 +11,10 @@ import FirebaseFirestore
 
 final class SignUpGuardianViewController: UIViewController {
     private var selectedGender: String = "" // "M" or "F"
-    
+
+    private let scrollView = UIScrollView()
+    private let contentView = UIView()
+
     // MARK: - UI 요소
     private lazy var nameTextField = createTextField(placeholder: "이름")
     private lazy var usernameTextField = createTextField(placeholder: "아이디")
@@ -23,7 +26,7 @@ final class SignUpGuardianViewController: UIViewController {
 
     private lazy var maleButton: UIButton = createGenderButton(title: "남성", gender: "M")
     private lazy var femaleButton: UIButton = createGenderButton(title: "여성", gender: "F")
-    
+
     private lazy var signUpButton: UIButton = {
         let button = UIButton(type: .custom)
         button.setTitle("회원가입 완료", for: .normal)
@@ -41,6 +44,31 @@ final class SignUpGuardianViewController: UIViewController {
         setNavigationBar()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(_:)), name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+
+        let bottomInset = keyboardFrame.height
+        scrollView.contentInset.bottom = bottomInset + 20
+        scrollView.verticalScrollIndicatorInsets.bottom = bottomInset + 20
+    }
+
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        scrollView.contentInset.bottom = 0
+        scrollView.verticalScrollIndicatorInsets.bottom = 0
+    }
+
     // MARK: - 회원가입 버튼 클릭
     @objc private func didTapSignUpButton() {
         guard let username = usernameTextField.text, !username.isEmpty,
@@ -49,8 +77,7 @@ final class SignUpGuardianViewController: UIViewController {
               let phone = phoneNumberTextField.text, !phone.isEmpty,
               let birthdate = birthTextField.text, !birthdate.isEmpty,
               let homeAddress = homeAddressTextField.text, !homeAddress.isEmpty,
-              let protectedPhoneNumber = protectedPhoneNumberTextField.text, !protectedPhoneNumber.isEmpty
-        else {
+              let protectedPhoneNumber = protectedPhoneNumberTextField.text, !protectedPhoneNumber.isEmpty else {
             return
         }
 
@@ -78,60 +105,61 @@ final class SignUpGuardianViewController: UIViewController {
     // MARK: - UI 설정
     private func setUI() {
         view.backgroundColor = .white
+
+        view.addSubview(scrollView)
+        scrollView.snp.makeConstraints { $0.edges.equalToSuperview() }
+
+        scrollView.addSubview(contentView)
+        contentView.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+            $0.width.equalTo(scrollView.snp.width)
+        }
+
         let stackView = UIStackView(arrangedSubviews: [
             nameTextField, usernameTextField, passwordTextField, phoneNumberTextField, birthTextField, homeAddressTextField, protectedPhoneNumberTextField, maleButton, femaleButton
         ])
-        
         stackView.axis = .vertical
         stackView.spacing = 15
         stackView.alignment = .fill
         stackView.distribution = .fillEqually
 
-        view.addSubview(stackView)
-        view.addSubview(signUpButton)
-        
+        contentView.addSubview(stackView)
+        contentView.addSubview(signUpButton)
+
         stackView.snp.makeConstraints { make in
-            make.centerX.equalTo(view)
-            make.centerY.equalTo(view)
-            make.leading.equalTo(view.snp.leading).offset(30)
-            make.trailing.equalTo(view.snp.trailing).offset(-30)
-            make.height.equalTo(500)
+            make.top.equalTo(contentView.snp.top).offset(40)
+            make.leading.equalTo(contentView.snp.leading).offset(30)
+            make.trailing.equalTo(contentView.snp.trailing).offset(-30)
         }
-        
+
         signUpButton.snp.makeConstraints { make in
-            make.leading.equalTo(view.snp.leading).offset(30)
-            make.trailing.equalTo(view.snp.trailing).offset(-30)
-            make.top.equalTo(stackView.snp.bottom).offset(15)
+            make.top.equalTo(stackView.snp.bottom).offset(20)
+            make.leading.equalTo(contentView.snp.leading).offset(30)
+            make.trailing.equalTo(contentView.snp.trailing).offset(-30)
             make.height.equalTo(50)
+            make.bottom.equalTo(contentView.snp.bottom).offset(-20)
         }
     }
 
-    // MARK: - 텍스트 필드 생성 함수
     private func createTextField(placeholder: String, isSecure: Bool = false) -> UITextField {
         let textField = UITextField()
         textField.placeholder = placeholder
         textField.isSecureTextEntry = isSecure
-        textField.textColor = .black  // 🔹 텍스트 색상 완전 검정색
-        textField.tintColor = .black  // 🔹 커서 색상도 검정색
-        textField.font = UIFont.appFont(.pretendardRegular, size: 18) // 🔹 폰트 변경
-
-        // 🔹 커스텀 테두리 스타일 적용
-        textField.layer.borderWidth = 1.0  // 테두리 두께 설정
+        textField.textColor = .black
+        textField.tintColor = .black
+        textField.font = UIFont.appFont(.pretendardRegular, size: 18)
+        textField.layer.borderWidth = 1.0
         textField.layer.borderColor = UIColor.lightGray.cgColor
-        textField.layer.cornerRadius = 5  // 둥근 모서리 적용
-        textField.backgroundColor = .white // 배경색 흰색 유지
-
+        textField.layer.cornerRadius = 5
+        textField.backgroundColor = .white
         textField.autocapitalizationType = .none
         textField.autocorrectionType = .no
         textField.spellCheckingType = .no
         textField.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 0))
         textField.leftViewMode = .always
-        
         return textField
     }
 
-    
-    // MARK: - 성별 선택 버튼 생성
     private func createGenderButton(title: String, gender: String) -> UIButton {
         let button = UIButton(type: .custom)
         button.setTitle(title, for: .normal)
@@ -145,7 +173,7 @@ final class SignUpGuardianViewController: UIViewController {
         button.tag = gender == "M" ? 1 : 2
         return button
     }
-    
+
     @objc private func didTapGenderButton(_ sender: UIButton) {
         selectedGender = sender.tag == 1 ? "M" : "F"
         maleButton.backgroundColor = sender.tag == 1 ? .darkGray : .white
@@ -157,18 +185,14 @@ extension SignUpGuardianViewController {
     private func setNavigationBar() {
         let appearance = UINavigationBarAppearance()
         appearance.backgroundColor = UIColor.appColor(.mainTheme)
-        
         appearance.titleTextAttributes = [
             .font: UIFont.appFont(.pretendardMedium, size: 18),
             .foregroundColor: UIColor.white
         ]
-        
         navigationController?.navigationBar.standardAppearance = appearance
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
         navigationController?.navigationBar.tintColor = .white
-        
         navigationItem.title = "보호자 회원가입"
-        
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             image: UIImage(systemName: "chevron.left"),
             style: .plain,
@@ -176,7 +200,7 @@ extension SignUpGuardianViewController {
             action: #selector(didTapLeftBarButton)
         )
     }
-    
+
     @objc private func didTapLeftBarButton() {
         navigationController?.popViewController(animated: true)
     }

@@ -89,6 +89,7 @@ final class LoginViewController: UIViewController {
         setUpLayOuts()
         setUpConstraints()
         setAddTarget()
+        setupTapToDismissKeyboard()
     }
     
     private func setAddTarget() {
@@ -155,6 +156,17 @@ extension LoginViewController {
     @objc private func signUpButtonTapped() {
         navigationController?.pushViewController(SignUpFirstStepViewController(), animated: true)
     }
+    
+    private func setupTapToDismissKeyboard() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapGesture)
+    }
+
+    @objc override func dismissKeyboard() {
+        view.endEditing(true)
+    }
+
 }
 
 extension LoginViewController {
