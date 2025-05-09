@@ -1,0 +1,41 @@
+# macOS 관련
+.DS_Store
+
+# Xcode 관련
+*.xcuserstate
+*.xcworkspace
+*.xccheckout
+*.xcscmblueprint
+*.xcodeproj/project.xcworkspace/
+
+# 빌드 디렉토리
+build/
+DerivedData/
+*.pbxuser
+!default.pbxuser
+
+# SwiftPM
+.build/
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+
+# Firebase / GoogleService
+GoogleService-Info.plist
+ApiKey.plist
+
+# 기타
+*.log
+*.env
+*.swp
+
+
