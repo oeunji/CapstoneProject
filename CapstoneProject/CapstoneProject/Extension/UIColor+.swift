@@ -8,10 +8,9 @@
 import UIKit.UIColor
 
 enum SceneColorAsset {
-    case white, black
-    case red
-    case gray5, gray4, gray3, gray2, gray1
-    case tvingAnotherLogo, tvingNotice, tvingNoticeTitle
+    case mainDarkGray, mainGray
+    case mainRed
+    case mainTheme, mainYellow
 }
 
 extension UIColor {
@@ -21,18 +20,11 @@ extension UIColor {
     
     static func appColor(_ name: SceneColorAsset) -> UIColor {
         switch name {
-        case .white: return UIColor(hexCode: "FFFFFF")
-        case .black: return UIColor(hexCode: "000000")
-        case .red: return UIColor(hexCode: "FF143C")
-        case .gray5: return UIColor(hexCode: "191919")
-        case .gray4: return UIColor(hexCode: "2E2E2E")
-        case .gray3: return UIColor(hexCode: "626262")
-        case .gray2: return UIColor(hexCode: "9C9C9C")
-        case .gray1: return UIColor(hexCode: "D6D6D6")
-            
-        case .tvingAnotherLogo: return UIColor(hexCode: "212121")
-        case .tvingNotice: return UIColor(hexCode: "8C8C8C")
-        case .tvingNoticeTitle: return UIColor(hexCode: "D9D9D9")
+        case .mainDarkGray: return UIColor(hexCode: "808080")
+        case .mainGray: return UIColor(hexCode: "D2D2D2")
+        case .mainRed: return UIColor(hexCode: "BF3131")
+        case .mainTheme: return UIColor(hexCode: "A3AF94")
+        case .mainYellow: return UIColor(hexCode: "F0F0D7")
         }
     }
 }
