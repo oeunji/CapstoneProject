@@ -64,7 +64,6 @@
 				540932DA30E717DE855F42A0 /* Pods-CapstoneProject.debug.xcconfig */,
 				D6E1AF5F7246E57F118932C0 /* Pods-CapstoneProject.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
