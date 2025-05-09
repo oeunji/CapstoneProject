@@ -8,6 +8,7 @@
 import UIKit.UIColor
 
 enum SceneColorAsset {
+    case black, white
     case mainDarkGray, mainGray
     case mainRed
     case mainTheme, mainYellow
@@ -20,6 +21,8 @@ extension UIColor {
     
     static func appColor(_ name: SceneColorAsset) -> UIColor {
         switch name {
+        case .black: return UIColor(hexCode: "000000")
+        case .white: return UIColor(hexCode: "FFFFFF")
         case .mainDarkGray: return UIColor(hexCode: "808080")
         case .mainGray: return UIColor(hexCode: "D2D2D2")
         case .mainRed: return UIColor(hexCode: "BF3131")

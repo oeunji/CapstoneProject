@@ -9,6 +9,9 @@ target 'CapstoneProject' do
   pod 'SnapKit'
   pod 'Then'
 
+  pod 'Firebase/Core'
+  pod 'Firebase/Firestore'
+
   # Pods for CapstoneProject
 
 end
