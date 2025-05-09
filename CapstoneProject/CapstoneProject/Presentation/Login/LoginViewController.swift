@@ -8,10 +8,11 @@
 import UIKit
 import SnapKit
 import FirebaseFirestore
+import Then
 
 final class LoginViewController: UIViewController {
     
-//    private let loginViewModel = LoginViewModel()
+    private let loginViewModel = LoginViewModel()
     
     // MARK: - UI Components
     private let mainAppLogo = UIImageView().then {
@@ -25,7 +26,7 @@ final class LoginViewController: UIViewController {
         $0.font = UIFont.appFont(.pretendardMedium, size: 15)
         $0.textColor = UIColor.appColor(.black)
         $0.backgroundColor = UIColor.appColor(.mainGray)
-        $0.layer.cornerRadius = 3
+        $0.layer.cornerRadius = 5
     }
     
     private let passwordTextField = UITextField().then {
@@ -35,7 +36,7 @@ final class LoginViewController: UIViewController {
         $0.font = UIFont.appFont(.pretendardMedium, size: 15)
         $0.textColor = UIColor.appColor(.black)
         $0.backgroundColor = UIColor.appColor(.mainGray)
-        $0.layer.cornerRadius = 3
+        $0.layer.cornerRadius = 5
         $0.isSecureTextEntry = true
     }
 
@@ -71,7 +72,6 @@ final class LoginViewController: UIViewController {
     private let textViewHeight: CGFloat = 48
     
     // MARK: - Lifecycle
-
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: false)
@@ -97,19 +97,17 @@ final class LoginViewController: UIViewController {
     }
     
     private func navigateToMainTabBar() {
-//        let mainTabBarVC = MainTabBarController()
-//
-//        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-//              let delegate = windowScene.delegate as? SceneDelegate,
-//              let window = delegate.window else {
-//            return
-//        }
-//        
-//        window.rootViewController = mainTabBarVC
-//        window.makeKeyAndVisible()
-    }
-    
+        let mainTabBarVC = MainTabBarController()
 
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let delegate = windowScene.delegate as? SceneDelegate,
+              let window = delegate.window else {
+            return
+        }
+        
+        window.rootViewController = mainTabBarVC
+        window.makeKeyAndVisible()
+    }
     
     private func showAlert(message: String) {
         let alert = UIAlertController(title: "알림", message: message, preferredStyle: .alert)
@@ -121,41 +119,41 @@ final class LoginViewController: UIViewController {
 
 extension LoginViewController {
     @objc private func loginButtonTapped() {
-//        guard let username = idTextField.text, !username.isEmpty,
-//              let password = passwordTextField.text, !password.isEmpty else {
-//            showAlert(message: "아이디와 비밀번호를 입력하세요.")
-//            return
-//        }
-//
-//        loginViewModel.login(username: username, password: password) { [weak self] success, errorMessage in
-//            DispatchQueue.main.async {
-//                if success {
-//
-//                    KeychainHelper.shared.save(username, forKey: "loggedInUsername")
-//
-//                    let profileViewModel = ProfileViewModel()
-//                    profileViewModel.fetchUserProfile {
-//                        if !profileViewModel.guardianPhone.isEmpty {
-//                            KeychainHelper.shared.save(profileViewModel.guardianPhone, forKey: "guardian_phone")
-//
-//                            // ✅ Keychain 저장 직후에는 약간의 지연을 준 다음 메인으로 전환
-//                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-//                                self?.navigateToMainTabBar()
-//                            }
-//                        } else {
-//                            self?.navigateToMainTabBar()
-//                        }
-//                    }
-//                } else {
-//                    self?.showAlert(message: errorMessage ?? "로그인 실패")
-//                }
-//            }
-//        }
+        guard let username = idTextField.text, !username.isEmpty,
+              let password = passwordTextField.text, !password.isEmpty else {
+            showAlert(message: "아이디와 비밀번호를 입력하세요.")
+            return
+        }
+
+        loginViewModel.login(username: username, password: password) { [weak self] success, errorMessage in
+            DispatchQueue.main.async {
+                if success {
+
+                    KeychainHelper.shared.save(username, forKey: "loggedInUsername")
+
+                    let profileViewModel = ProfileViewModel()
+                    profileViewModel.fetchUserProfile {
+                        if !profileViewModel.guardianPhone.isEmpty {
+                            KeychainHelper.shared.save(profileViewModel.guardianPhone, forKey: "guardian_phone")
+
+                            // ✅ Keychain 저장 직후에는 약간의 지연을 준 다음 메인으로 전환
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                self?.navigateToMainTabBar()
+                            }
+                        } else {
+                            self?.navigateToMainTabBar()
+                        }
+                    }
+                } else {
+                    self?.showAlert(message: errorMessage ?? "로그인 실패")
+                }
+            }
+        }
 
     }
     
     @objc private func signUpButtonTapped() {
-//        navigationController?.pushViewController(SignUpFirstStepViewController(), animated: true)
+        navigationController?.pushViewController(SignUpFirstStepViewController(), animated: true)
     }
 }
 

@@ -8,6 +8,7 @@ target 'CapstoneProject' do
   pod 'NMapsMap'
   pod 'SnapKit'
   pod 'Then'
+  pod 'Alamofire'
 
   pod 'Firebase/Core'
   pod 'Firebase/Firestore'

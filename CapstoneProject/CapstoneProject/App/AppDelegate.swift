@@ -6,14 +6,18 @@
 //
 
 import UIKit
+import FirebaseCore
+import Firebase
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
     // 네이버 지도 경로 그리기 rHdEtpFSLDGXK8H2iYsopCIBNoZp0YEeNJDf8W5G
 
-
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        FirebaseApp.configure()
+
         return true
     }
 

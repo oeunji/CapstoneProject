@@ -1,8 +1,8 @@
 //
-//  ViewController.swift
+//  RouteSetViewController.swift
 //  CapstoneProject
 //
-//  Created by 이은지 on 5/9/25.
+//  Created by 이은지 on 2/3/25.
 //
 
 import UIKit
@@ -10,7 +10,7 @@ import SnapKit
 import MapKit
 import CoreLocation
 
-class ViewController: UIViewController, CLLocationManagerDelegate {
+final class RouteSetViewController: UIViewController, CLLocationManagerDelegate {
 
     private let mapView = MKMapView()
     private let locationManager = CLLocationManager()

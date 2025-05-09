@@ -1,8 +1,8 @@
 //
-//  ViewController.swift
+//  HomeViewController.swift
 //  CapstoneProject
 //
-//  Created by 이은지 on 5/9/25.
+//  Created by 이은지 on 1/18/25.
 //
 
 import UIKit
@@ -10,7 +10,7 @@ import SnapKit
 import MapKit
 import CoreLocation
 
-class ViewController: UIViewController, CLLocationManagerDelegate {
+class HomeViewController: UIViewController, CLLocationManagerDelegate {
 
     private let mapView = MKMapView()
     private let locationManager = CLLocationManager()
