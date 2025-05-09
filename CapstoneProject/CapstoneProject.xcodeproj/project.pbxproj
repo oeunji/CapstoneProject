@@ -6,7 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		73BAB098A9A56ACFDF971B78 /* Pods_CapstoneProject.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D469723FC4A5468BBF59029B /* Pods_CapstoneProject.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		540932DA30E717DE855F42A0 /* Pods-CapstoneProject.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CapstoneProject.debug.xcconfig"; path = "Target Support Files/Pods-CapstoneProject/Pods-CapstoneProject.debug.xcconfig"; sourceTree = "<group>"; };
+		D469723FC4A5468BBF59029B /* Pods_CapstoneProject.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CapstoneProject.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D6E1AF5F7246E57F118932C0 /* Pods-CapstoneProject.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CapstoneProject.release.xcconfig"; path = "Target Support Files/Pods-CapstoneProject/Pods-CapstoneProject.release.xcconfig"; sourceTree = "<group>"; };
 		D85FA2392DCDF50B00990E0B /* CapstoneProject.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CapstoneProject.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -36,17 +43,38 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				73BAB098A9A56ACFDF971B78 /* Pods_CapstoneProject.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1B77465300A9CFF0DC2B48FC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D469723FC4A5468BBF59029B /* Pods_CapstoneProject.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		7143CED62B58D6848E44E349 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				540932DA30E717DE855F42A0 /* Pods-CapstoneProject.debug.xcconfig */,
+				D6E1AF5F7246E57F118932C0 /* Pods-CapstoneProject.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		D85FA2302DCDF50B00990E0B = {
 			isa = PBXGroup;
 			children = (
 				D85FA23B2DCDF50B00990E0B /* CapstoneProject */,
 				D85FA23A2DCDF50B00990E0B /* Products */,
+				7143CED62B58D6848E44E349 /* Pods */,
+				1B77465300A9CFF0DC2B48FC /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -65,9 +93,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D85FA24C2DCDF50C00990E0B /* Build configuration list for PBXNativeTarget "CapstoneProject" */;
 			buildPhases = (
+				360B878B9D8387FFFA3D2A9D /* [CP] Check Pods Manifest.lock */,
 				D85FA2352DCDF50B00990E0B /* Sources */,
 				D85FA2362DCDF50B00990E0B /* Frameworks */,
 				D85FA2372DCDF50B00990E0B /* Resources */,
+				35DA7DC7DA535BAB9A04A122 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -77,8 +107,6 @@
 				D85FA23B2DCDF50B00990E0B /* CapstoneProject */,
 			);
 			name = CapstoneProject;
-			packageProductDependencies = (
-			);
 			productName = CapstoneProject;
 			productReference = D85FA2392DCDF50B00990E0B /* CapstoneProject.app */;
 			productType = "com.apple.product-type.application";
@@ -127,6 +155,48 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		35DA7DC7DA535BAB9A04A122 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CapstoneProject/Pods-CapstoneProject-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CapstoneProject/Pods-CapstoneProject-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CapstoneProject/Pods-CapstoneProject-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		360B878B9D8387FFFA3D2A9D /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-CapstoneProject-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		D85FA2352DCDF50B00990E0B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -140,6 +210,7 @@
 /* Begin XCBuildConfiguration section */
 		D85FA24D2DCDF50C00990E0B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 540932DA30E717DE855F42A0 /* Pods-CapstoneProject.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -168,6 +239,7 @@
 		};
 		D85FA24E2DCDF50C00990E0B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D6E1AF5F7246E57F118932C0 /* Pods-CapstoneProject.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

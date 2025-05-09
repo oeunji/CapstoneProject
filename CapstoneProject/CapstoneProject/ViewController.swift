@@ -6,15 +6,28 @@
 //
 
 import UIKit
+import SnapKit
+import Then
+import MapKit
+import CoreLocation
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, CLLocationManagerDelegate {
+
+    private let mapView = MKMapView()
+    private let locationManager = CLLocationManager()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
-        view.backgroundColor = .magenta
+        
+        view.addSubview(mapView)
+        mapView.frame = view.bounds
+
+        // 위치 권한 요청
+        locationManager.delegate = self
+        locationManager.requestWhenInUseAuthorization()
+        locationManager.startUpdatingLocation()
+
+        mapView.showsUserLocation = true
+        mapView.userTrackingMode = .follow
     }
-
-
 }
-
