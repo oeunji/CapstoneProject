@@ -10,7 +10,7 @@ import MapKit
 import CoreLocation
 import SnapKit
 
-final class RouteSetViewController: UIViewController {
+final class RouteSetViewController: UIViewController, MKMapViewDelegate {
 
     // MARK: - Properties
     private let mapView = MKMapView()
@@ -27,6 +27,7 @@ final class RouteSetViewController: UIViewController {
         flowLayout.itemSize = .init(width: UIScreen.main.bounds.width - 40, height: 140)
         flowLayout.minimumLineSpacing = 10
         let collectionView = RouteSelectCollectionView(frame: .zero, collectionViewLayout: flowLayout)
+        collectionView.isHidden = true
         return collectionView
     }()
 
@@ -56,6 +57,7 @@ final class RouteSetViewController: UIViewController {
     
     // MARK: - Setup
     private func setupMap() {
+        mapView.delegate = self
         mapView.showsUserLocation = true
         mapView.userTrackingMode = .follow
         locationManager.delegate = self
@@ -93,6 +95,21 @@ final class RouteSetViewController: UIViewController {
         UIView.animate(withDuration: 0.3) {
             self.view.layoutIfNeeded()
         }
+    }
+
+    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+        guard !(view.annotation is MKUserLocation) else { return }
+
+        AlertUtils.showConfirmationAlert(
+            title: "경로 안내를 시작할까요?",
+            confirmTitle: "시작",
+            cancelTitle: "취소",
+            from: self,
+            confirmHandler: {
+                // TODO: 경로 안내 시작 로직 추가
+                print("🚀 경로 안내 시작!")
+            }
+        )
     }
 
     
