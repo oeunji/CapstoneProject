@@ -53,9 +53,23 @@ final class RouteSetViewController: UIViewController {
                 annotation.title = completion.title
                 self?.mapView.addAnnotation(annotation)
                 self?.mapView.setCenter(coordinate, animated: true)
+                self?.searchBar.resignFirstResponder()
+                self?.resetResultViewHeight()
             }
         }
+        
     }
+    
+    private func resetResultViewHeight() {
+        resultViewHeightConstraint?.deactivate()
+        resultView.snp.makeConstraints {
+            resultViewHeightConstraint = $0.height.equalTo(1).constraint
+        }
+        UIView.animate(withDuration: 0.3) {
+            self.view.layoutIfNeeded()
+        }
+    }
+
     
     // MARK: - Data Bind
 }
@@ -77,6 +91,33 @@ extension RouteSetViewController: CLLocationManagerDelegate {
 extension RouteSetViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         searchCompleter.queryFragment = searchText
+    }
+
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(true, animated: true)
+
+        resultViewHeightConstraint?.deactivate()
+        resultView.snp.makeConstraints {
+            resultViewHeightConstraint = $0.bottom.equalTo(view.safeAreaLayoutGuide).constraint
+        }
+
+        UIView.animate(withDuration: 0.3) {
+            self.view.layoutIfNeeded()
+        }
+    }
+
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
+        searchBar.setShowsCancelButton(false, animated: true)
+
+        resultViewHeightConstraint?.deactivate()
+        resultView.snp.makeConstraints {
+            resultViewHeightConstraint = $0.height.equalTo(1).constraint
+        }
+
+        UIView.animate(withDuration: 0.3) {
+            self.view.layoutIfNeeded()
+        }
     }
 }
 
@@ -103,7 +144,7 @@ extension RouteSetViewController {
         }
         
         searchBar.snp.makeConstraints {
-            $0.top.equalTo(view.safeAreaLayoutGuide).offset(80)
+            $0.top.equalTo(view.safeAreaLayoutGuide)
             $0.leading.trailing.equalToSuperview()
             $0.height.equalTo(44)
         }
@@ -111,7 +152,7 @@ extension RouteSetViewController {
         resultView.snp.makeConstraints {
             $0.top.equalTo(searchBar.snp.bottom)
             $0.leading.trailing.equalToSuperview()
-            resultViewHeightConstraint = $0.height.equalTo(200).constraint  // 초기 높이
+            resultViewHeightConstraint = $0.height.equalTo(1).constraint  // 초기 높이
         }
     }
 }
