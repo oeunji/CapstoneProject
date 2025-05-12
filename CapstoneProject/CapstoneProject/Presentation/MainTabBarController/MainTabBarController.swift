@@ -71,3 +71,26 @@ class MainTabBarController: UITabBarController {
         return UIImage(systemName: name)?.withRenderingMode(.alwaysTemplate) ?? UIImage()
     }
 }
+
+// MARK: - 흔들기 모션
+extension MainTabBarController {
+    override func motionBegan(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
+        if motion == .motionShake {
+            let sheet = UIAlertController(title: "비상", message: "112에 전화를 걸까요?", preferredStyle: .alert)
+            
+            sheet.addAction(UIAlertAction(title: "거절", style: .cancel, handler: { _ in
+                print("거절 클릭")
+            }))
+            
+            sheet.addAction(UIAlertAction(title: "수락", style: .destructive, handler: { _ in
+                EmergencyUtils.callPoliceOfficer()
+                
+            }))
+            present(sheet, animated: true)
+        }
+    }
+
+    override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
+        if motion == .motionShake { print("흔들기 끝") }
+    }
+}

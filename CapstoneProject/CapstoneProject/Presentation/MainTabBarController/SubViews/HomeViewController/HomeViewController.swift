@@ -37,7 +37,6 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
         $0.imageView?.contentMode = .scaleAspectFit
         $0.contentHorizontalAlignment = .fill
         $0.contentVerticalAlignment = .fill
-        $0.setTitle("112", for: .normal)
     }
     
     private let timeImageView = UIImageView().then {
@@ -91,18 +90,10 @@ extension HomeViewController {
         }))
         
         sheet.addAction(UIAlertAction(title: "수락", style: .destructive, handler: { _ in
-            self.callPoliceOfficer()
+            EmergencyUtils.callPoliceOfficer()
             
         }))
         present(sheet, animated: true)
-    }
-    
-    @objc private func callPoliceOfficer() {
-        if let phoneNumber = sirenButton.currentTitle,
-           let url = URL(string: "tel://\(phoneNumber)"),
-           UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url, options: [:], completionHandler: nil)
-        }
     }
 }
 
