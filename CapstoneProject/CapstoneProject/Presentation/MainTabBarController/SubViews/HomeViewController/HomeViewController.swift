@@ -52,6 +52,8 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
 
         configureLocation()
         configureActions()
+        
+        dataBind()
     }
     
     private func configureActions() {
@@ -73,6 +75,38 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
+    }
+    
+    private func dataBind() {
+        bindLocation()
+        bindTimeZone()
+    }
+    
+    private func bindLocation() {
+        locationViewModel.$currentLocation
+            .compactMap { $0 }
+            .sink { [weak self] location in
+                let lat = location.coordinate.latitude
+                let lng = location.coordinate.longitude
+                print("🧭 HomeVC에서 위치 수신: \(lat), \(lng)")
+
+                self?.timeZoneViewModel.fetchTimeZone(lat: lat, lng: lng)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func bindTimeZone() {
+        timeZoneViewModel.$timeZoneData
+            .receive(on: DispatchQueue.main)
+            .compactMap { $0 }
+            .sink { [weak self] data in
+                guard let self = self else { return }
+
+                let symbolName = data.dayOrNight == "day" ? "sun.max" : "moon.fill"
+                self.timeImageView.image = UIImage(systemName: symbolName)
+                self.timeImageView.isHidden = false
+            }
+            .store(in: &cancellables)
     }
 }
 
@@ -125,7 +159,7 @@ extension HomeViewController {
         }
         
         timeImageView.snp.makeConstraints {
-            $0.top.equalToSuperview().offset(1)
+            $0.top.equalToSuperview().offset(80)
             $0.leading.equalTo(view.safeAreaLayoutGuide).offset(20)
             $0.width.height.equalTo(30)
         }

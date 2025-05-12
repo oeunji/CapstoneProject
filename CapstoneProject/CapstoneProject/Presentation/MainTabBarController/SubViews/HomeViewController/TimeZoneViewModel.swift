@@ -9,7 +9,7 @@ import Foundation
 import Alamofire
 
 class TimeZoneViewModel: ObservableObject {
-    @Published var timeZoneData: TimeZoneResponse?
+    @Published var timeZoneData: TimeZoneDTO?
     @Published var errorMessage: String?
 
     func fetchTimeZone(lat: Double, lng: Double) {
@@ -24,7 +24,7 @@ class TimeZoneViewModel: ObservableObject {
 
         AF.request(url, method: .get, parameters: params, encoding: URLEncoding.default)
             .validate()
-            .responseDecodable(of: TimeZoneResponse.self) { response in
+            .responseDecodable(of: TimeZoneDTO.self) { response in
                 switch response.result {
                 case .success(let data):
                     DispatchQueue.main.async {
