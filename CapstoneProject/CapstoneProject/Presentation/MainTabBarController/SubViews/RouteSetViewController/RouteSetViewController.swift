@@ -6,27 +6,66 @@
 //
 
 import UIKit
-import SnapKit
 import MapKit
 import CoreLocation
+import SnapKit
 
 final class RouteSetViewController: UIViewController, CLLocationManagerDelegate {
 
+    // MARK: - Properties
     private let mapView = MKMapView()
     private let locationManager = CLLocationManager()
 
+    // MARK: - UI Components
+
+    // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        view.addSubview(mapView)
-        mapView.frame = view.bounds
+        configureLocation()
+        
+        configureUI()
+        configureConstraints()
+        
+    }
+    
+    private func configureLocation() {
+        setupMapViewLocationTracking()
+        setupLocationManager()
+    }
 
-        // 위치 권한 요청
+    private func setupMapViewLocationTracking() {
+        mapView.showsUserLocation = true
+        mapView.userTrackingMode = .follow
+    }
+
+    private func setupLocationManager() {
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
+    }
+    
+    // MARK: - Data Bind
+}
 
-        mapView.showsUserLocation = true
-        mapView.userTrackingMode = .follow
+// MARK: - @objc
+extension RouteSetViewController {
+}
+
+// MARK: - Configure View
+extension RouteSetViewController {
+    private func configureUI() {
+        view.addSubview(mapView)
+        
+        [].forEach {
+            view.addSubview($0)
+        }
+    }
+    
+    private func configureConstraints() {
+        mapView.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+        }
+
     }
 }
