@@ -48,7 +48,7 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
         $0.font = .appFont(.pretendardMedium, size: 14)
         $0.textColor = .black
         $0.numberOfLines = 1
-        $0.textAlignment = .left
+        $0.textAlignment = .center
         $0.isHidden = true
     }
 
@@ -140,10 +140,9 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
 
         homeViewModel.resolveDestinationCoordinate(from: address)
 
-        // 바인딩 통해 coordinate 도달 시점에 drawRouteIfNeeded 호출
         homeViewModel.$destinationCoordinate
             .compactMap { $0 }
-            .first()  // 최초 응답만 처리
+            .first()
             .sink { [weak self] _ in
                 guard let self = self, let current = self.locationViewModel.currentLocation?.coordinate else { return }
                 self.homeViewModel.drawRouteIfNeeded(on: self.mapView, from: current)
@@ -154,28 +153,19 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
 
 extension HomeViewController {
     @objc private func startButtonTapped() {
-        let alert = UIAlertController(title: "집으로 경로를 안내할까요?", message: nil, preferredStyle: .alert)
-
-        alert.addAction(UIAlertAction(title: "거절", style: .cancel))
-        alert.addAction(UIAlertAction(title: "수락", style: .default, handler: { [weak self] _ in
-            self?.startRouting()
-        }))
-
-        present(alert, animated: true)
+        AlertUtils.showConfirmationAlert(
+            title: "집으로 경로를 안내할까요?",
+            confirmTitle: "수락",
+            cancelTitle: "거절",
+            from: self,
+            confirmHandler: { [weak self] in
+                self?.startRouting()
+            }
+        )
     }
     
     @objc private func sirenButtonTapped() {
-        let sheet = UIAlertController(title: "비상", message: "112에 전화를 걸까요?", preferredStyle: .alert)
-        
-        sheet.addAction(UIAlertAction(title: "거절", style: .cancel, handler: { _ in
-            print("거절 클릭")
-        }))
-        
-        sheet.addAction(UIAlertAction(title: "수락", style: .destructive, handler: { _ in
-            EmergencyUtils.callPoliceOfficer()
-            
-        }))
-        present(sheet, animated: true)
+        AlertUtils.showEmergencyAlert(from: self)
     }
 }
 
@@ -190,7 +180,6 @@ extension HomeViewController: MKMapViewDelegate {
         return MKOverlayRenderer()
     }
 }
-
 
 extension HomeViewController {
     private func configureUI() {
