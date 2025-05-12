@@ -21,6 +21,14 @@ final class RouteSetViewController: UIViewController {
     private let routeSearchResultView = SearchResultTableView()
 
     // MARK: - UI Components
+    private let routeSelectCollectionView: RouteSelectCollectionView = {
+        let flowLayout = UICollectionViewFlowLayout()
+        flowLayout.scrollDirection = .horizontal
+        flowLayout.itemSize = .init(width: UIScreen.main.bounds.width - 40, height: 140)
+        flowLayout.minimumLineSpacing = 10
+        let collectionView = RouteSelectCollectionView(frame: .zero, collectionViewLayout: flowLayout)
+        return collectionView
+    }()
 
     // MARK: - Life Cycle
     override func viewDidLoad() {
@@ -150,7 +158,7 @@ extension RouteSetViewController {
     private func configureUI() {
         view.addSubview(mapView)
         
-        [routeSearchResultView].forEach {
+        [routeSearchResultView, routeSelectCollectionView].forEach {
             view.addSubview($0)
         }
     }
@@ -164,6 +172,12 @@ extension RouteSetViewController {
             $0.top.equalTo(view.safeAreaLayoutGuide).offset(0)
             $0.leading.trailing.equalToSuperview()
             routeResultViewHeightConstraint = $0.height.equalTo(0).constraint
+        }
+        
+        routeSelectCollectionView.snp.makeConstraints {
+            $0.horizontalEdges.equalToSuperview().offset(20)
+            $0.centerY.equalToSuperview()
+            $0.height.equalTo(300)
         }
     }
 }

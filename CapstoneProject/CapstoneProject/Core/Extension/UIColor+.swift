@@ -12,6 +12,8 @@ enum SceneColorAsset {
     case mainDarkGray, mainGray
     case mainRed
     case mainTheme, mainYellow
+    case gray900
+    case green900
 }
 
 extension UIColor {
@@ -28,6 +30,8 @@ extension UIColor {
         case .mainRed: return UIColor(hexCode: "BF3131")
         case .mainTheme: return UIColor(hexCode: "A3AF94")
         case .mainYellow: return UIColor(hexCode: "F0F0D7")
+        case .green900: return UIColor(hexCode: "006600")
+        case .gray900: return UIColor(hexCode: "4B4B4B")
         }
     }
 }
