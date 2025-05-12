@@ -10,6 +10,9 @@ import MapKit
 import CoreLocation
 import SnapKit
 
+import FirebaseFirestore
+
+
 final class RouteSetViewController: UIViewController, MKMapViewDelegate {
 
     // MARK: - Properties
@@ -19,6 +22,8 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     private let routeSearchCompleter = MKLocalSearchCompleter()
     private var routeResultViewHeightConstraint: Constraint?
     private let routeSearchResultView = SearchResultTableView()
+    
+    private var currentUserCoordinate: CLLocationCoordinate2D?
 
     // MARK: - UI Components
     private let routeSelectCollectionView: RouteSelectCollectionView = {
@@ -98,7 +103,11 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     }
 
     func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
-        guard !(view.annotation is MKUserLocation) else { return }
+        guard let destinationCoordinate = view.annotation?.coordinate,
+              !(view.annotation is MKUserLocation),
+              let startCoordinate = currentUserCoordinate else {
+            return
+        }
 
         AlertUtils.showConfirmationAlert(
             title: "경로 안내를 시작할까요?",
@@ -106,8 +115,10 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             cancelTitle: "취소",
             from: self,
             confirmHandler: {
-                // TODO: 경로 안내 시작 로직 추가
-                print("🚀 경로 안내 시작!")
+                print("🚀 출발지 (사용자 위치): \(startCoordinate.latitude), \(startCoordinate.longitude)")
+                print("🏁 도착지 (마커 위치): \(destinationCoordinate.latitude), \(destinationCoordinate.longitude)")
+
+//                self.saveStartAndEndCoordinatesToFirestore(start: startCoordinate, end: destinationCoordinate)
             }
         )
     }
@@ -125,6 +136,12 @@ extension RouteSetViewController: CLLocationManagerDelegate {
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         if manager.authorizationStatus == .authorizedWhenInUse {
             locationManager.startUpdatingLocation()
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let location = locations.last {
+            currentUserCoordinate = location.coordinate
         }
     }
 }
