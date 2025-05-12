@@ -15,10 +15,9 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
 
     private let mapView = MKMapView()
     private let locationManager = CLLocationManager()
-    // TODO: - TimeZone 구현
     private let timeZoneViewModel = TimeZoneViewModel()
-    // TODO: - LocationViewModel 구현
     private let locationViewModel = LocationViewModel()
+    private let profileViewModel = ProfileViewModel()
     private var cancellables = Set<AnyCancellable>()
     
     private let startButton = UIButton(type: .system).then {
@@ -43,10 +42,20 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
         $0.contentMode = .scaleAspectFit
         $0.tintColor = .black
     }
+    
+    private let timeLabel = UILabel().then {
+        $0.font = .appFont(.pretendardMedium, size: 14)
+        $0.textColor = .black
+        $0.numberOfLines = 1
+        $0.textAlignment = .left
+        $0.isHidden = true
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        mapView.delegate = self
+
         configureUI()
         configureConstraints()
 
@@ -80,6 +89,7 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
     private func dataBind() {
         bindLocation()
         bindTimeZone()
+        bineProfile()
     }
     
     private func bindLocation() {
@@ -88,7 +98,6 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
             .sink { [weak self] location in
                 let lat = location.coordinate.latitude
                 let lng = location.coordinate.longitude
-                print("🧭 HomeVC에서 위치 수신: \(lat), \(lng)")
 
                 self?.timeZoneViewModel.fetchTimeZone(lat: lat, lng: lng)
             }
@@ -108,12 +117,63 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
             }
             .store(in: &cancellables)
     }
+    
+    private func bineProfile() {
+        profileViewModel.fetchUserProfile {
+            print("✅ 사용자 정보 로드 완료: \(self.profileViewModel.userProfile?.homeAddress ?? "주소 없음")")
+        }
+    }
 }
 
 extension HomeViewController {
-    // TODO: - 집으로 시작하기 구현
     @objc private func startButtonTapped() {
-        
+        let alert = UIAlertController(title: "집으로 경로를 안내할까요?", message: nil, preferredStyle: .alert)
+
+        alert.addAction(UIAlertAction(title: "거절", style: .cancel, handler: { _ in
+            print("❌ 사용자가 경로 안내를 거절했습니다.")
+        }))
+
+        alert.addAction(UIAlertAction(title: "수락", style: .default, handler: { [weak self] _ in
+            guard let self = self else { return }
+
+            guard let address = self.profileViewModel.userProfile?.homeAddress, !address.isEmpty else {
+                print("🚨 homeAddress 없음")
+                return
+            }
+
+            guard let userLocation = self.locationViewModel.currentLocation?.coordinate else {
+                print("🚨 현재 위치 정보 없음")
+                return
+            }
+
+            let geocoder = CLGeocoder()
+            geocoder.geocodeAddressString(address) { placemarks, error in
+                if let error = error {
+                    print("❌ 주소 변환 실패: \(error.localizedDescription)")
+                    return
+                }
+
+                guard let destination = placemarks?.first?.location?.coordinate else {
+                    print("❌ 유효한 위치 정보 없음")
+                    return
+                }
+
+                DrawRouteUtils.drawRoute(
+                    on: self.mapView,
+                    from: userLocation,
+                    to: destination,
+                    withAnnotationTitle: "집으로",
+                    infoHandler: { infoText in
+                        DispatchQueue.main.async {
+                            self.timeLabel.text = infoText
+                            self.timeLabel.isHidden = false
+                        }
+                    }
+                )
+            }
+        }))
+
+        present(alert, animated: true)
     }
     
     @objc private func sirenButtonTapped() {
@@ -131,11 +191,24 @@ extension HomeViewController {
     }
 }
 
+extension HomeViewController: MKMapViewDelegate {
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        if let polyline = overlay as? MKPolyline {
+            let renderer = MKPolylineRenderer(polyline: polyline)
+            renderer.strokeColor = .systemBlue
+            renderer.lineWidth = 5
+            return renderer
+        }
+        return MKOverlayRenderer()
+    }
+}
+
+
 extension HomeViewController {
     private func configureUI() {
         view.addSubview(mapView)
         
-        [startButton, sirenButton, timeImageView].forEach {
+        [startButton, sirenButton, timeImageView, timeLabel].forEach {
             view.addSubview($0)
         }
     }
@@ -162,6 +235,11 @@ extension HomeViewController {
             $0.top.equalToSuperview().offset(80)
             $0.leading.equalTo(view.safeAreaLayoutGuide).offset(20)
             $0.width.height.equalTo(30)
+        }
+        
+        timeLabel.snp.makeConstraints {
+            $0.centerX.equalToSuperview()
+            $0.centerY.equalTo(timeImageView)
         }
     }
 }

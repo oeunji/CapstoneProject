@@ -58,10 +58,17 @@ class ProfileViewController: UIViewController {
     }
     
     private func updateUI() {
-        nameLabel.text = viewModel.name
-        genderLabel.text = (viewModel.gender == "M") ? "남" : "여"
-        birthdateLabel.text = " · \(formatBirthdate(viewModel.birthdate))"
-        print("\(viewModel.guardianPhone)")
+        guard let user = viewModel.userProfile else {
+            nameLabel.text = "이름 없음"
+            genderLabel.text = "성별 없음"
+            birthdateLabel.text = " · 생년월일 없음"
+            return
+        }
+
+        nameLabel.text = user.name
+        genderLabel.text = user.formattedGender
+        birthdateLabel.text = user.formattedBirthdate
+        print("📞 보호자 연락처: \(user.guardianPhone)")
     }
     
     private func formatBirthdate(_ birthdate: String) -> String {

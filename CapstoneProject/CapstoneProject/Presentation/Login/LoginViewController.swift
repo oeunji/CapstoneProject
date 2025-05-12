@@ -134,10 +134,9 @@ extension LoginViewController {
 
                     let profileViewModel = ProfileViewModel()
                     profileViewModel.fetchUserProfile {
-                        if !profileViewModel.guardianPhone.isEmpty {
-                            KeychainHelper.shared.save(profileViewModel.guardianPhone, forKey: "guardian_phone")
+                        if let phone = profileViewModel.userProfile?.guardianPhone, !phone.isEmpty {
+                            KeychainHelper.shared.save(phone, forKey: "guardian_phone")
 
-                            // ✅ Keychain 저장 직후에는 약간의 지연을 준 다음 메인으로 전환
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                                 self?.navigateToMainTabBar()
                             }
@@ -145,6 +144,8 @@ extension LoginViewController {
                             self?.navigateToMainTabBar()
                         }
                     }
+
+                    
                 } else {
                     self?.showAlert(message: errorMessage ?? "로그인 실패")
                 }
