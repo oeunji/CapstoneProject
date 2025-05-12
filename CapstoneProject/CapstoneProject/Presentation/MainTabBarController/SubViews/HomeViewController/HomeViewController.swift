@@ -13,14 +13,17 @@ import SnapKit
 
 final class HomeViewController: UIViewController, CLLocationManagerDelegate {
 
+    // MARK: - Properties
     private let mapView = MKMapView()
     private let locationManager = CLLocationManager()
     private let timeZoneViewModel = TimeZoneViewModel()
     private let locationViewModel = LocationViewModel()
     private let profileViewModel = ProfileViewModel()
     private let homeViewModel = HomeViewModel()
+    private let mapViewModel = HomeMapViewModel()
     private var cancellables = Set<AnyCancellable>()
     
+    // MARK: - UI Components
     private let startButton = UIButton(type: .system).then {
         $0.backgroundColor = UIColor.appColor(.mainTheme)
         $0.titleLabel?.font = UIFont.appFont(.pretendardMedium, size: 20)
@@ -52,6 +55,7 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
         $0.isHidden = true
     }
 
+    // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -87,11 +91,14 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
         locationManager.startUpdatingLocation()
     }
     
+    // MARK: - Data Bind
     private func dataBind() {
         bindLocation()
         bindTimeZone()
         bineProfile()
         bindRouteInfo()
+        bindMapMarkers()
+        mapViewModel.fetchMarkers()
     }
     
     private func bindLocation() {
@@ -149,6 +156,32 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
             }
             .store(in: &cancellables)
     }
+    
+    private func bindMapMarkers() {
+        mapViewModel.$bellMarkers
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] coords in
+                coords.forEach { coordinate in
+                    let annotation = MKPointAnnotation()
+                    annotation.coordinate = coordinate
+                    annotation.title = "비상벨"
+                    self?.mapView.addAnnotation(annotation)
+                }
+            }
+            .store(in: &cancellables)
+
+        mapViewModel.$publicOfficeMarkers
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] items in
+                items.forEach { (coordinate, name) in
+                    let annotation = MKPointAnnotation()
+                    annotation.coordinate = coordinate
+                    annotation.title = name
+                    self?.mapView.addAnnotation(annotation)
+                }
+            }
+            .store(in: &cancellables)
+    }
 }
 
 extension HomeViewController {
@@ -169,6 +202,7 @@ extension HomeViewController {
     }
 }
 
+// MARK: - MKMapViewDelegate
 extension HomeViewController: MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if let polyline = overlay as? MKPolyline {
@@ -179,8 +213,32 @@ extension HomeViewController: MKMapViewDelegate {
         }
         return MKOverlayRenderer()
     }
+    
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        guard !(annotation is MKUserLocation) else { return nil }
+
+        let identifier = "CustomMarker"
+        var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+
+        if annotationView == nil {
+            annotationView = MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+            annotationView?.canShowCallout = true
+        } else {
+            annotationView?.annotation = annotation
+        }
+
+        if annotation.title == "비상벨" {
+            annotationView?.image = UIImage(systemName: "bell.fill")?.withTintColor(.black, renderingMode: .alwaysOriginal)
+        } else {
+            annotationView?.image = UIImage(systemName: "house.badge.exclamationmark.fill")?.withTintColor(.systemRed, renderingMode: .alwaysOriginal)
+        }
+
+        return annotationView
+    }
+
 }
 
+// MARK: - Configure View
 extension HomeViewController {
     private func configureUI() {
         view.addSubview(mapView)

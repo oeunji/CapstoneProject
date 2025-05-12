@@ -22,7 +22,6 @@ final class LocationViewModel: ObservableObject {
         locationRequest.locationPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] location in
-                print("📍 ViewModel에서 받은 위치: \(location.coordinate.latitude), \(location.coordinate.longitude)")
                 self?.currentLocation = location
             }
             .store(in: &cancellables)

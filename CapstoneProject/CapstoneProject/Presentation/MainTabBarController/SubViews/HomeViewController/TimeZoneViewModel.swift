@@ -3,7 +3,7 @@
 //  CapstoneProject
 //
 //  Created by 이은지 on 4/1/25.
-//  cobalt-baton-448207-q9
+//
 
 import Foundation
 import Alamofire
@@ -13,7 +13,6 @@ class TimeZoneViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     func fetchTimeZone(lat: Double, lng: Double) {
-        print("📡 TimeZone API 요청 시작: \(lat), \(lng)")
         
         let url = "https://us-central1-cobalt-baton-448207-q9.cloudfunctions.net/getTimeZone"
 
@@ -28,7 +27,6 @@ class TimeZoneViewModel: ObservableObject {
                 switch response.result {
                 case .success(let data):
                     DispatchQueue.main.async {
-                        print("✅ 디코딩 성공")
                         self.timeZoneData = data
                     }
                 case .failure(let error):
@@ -36,12 +34,10 @@ class TimeZoneViewModel: ObservableObject {
                         print("❌ 디코딩 실패: \(error.localizedDescription)")
                         if let data = response.data,
                            let str = String(data: data, encoding: .utf8) {
-                            print("📥 원시 응답: \(str)")
                         }
                         self.errorMessage = error.localizedDescription
                     }
                 }
             }
-
     }
 }
