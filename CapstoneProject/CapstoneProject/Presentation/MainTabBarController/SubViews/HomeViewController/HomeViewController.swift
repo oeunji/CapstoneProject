@@ -18,6 +18,7 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
     private let timeZoneViewModel = TimeZoneViewModel()
     private let locationViewModel = LocationViewModel()
     private let profileViewModel = ProfileViewModel()
+    private let homeViewModel = HomeViewModel()
     private var cancellables = Set<AnyCancellable>()
     
     private let startButton = UIButton(type: .system).then {
@@ -90,6 +91,7 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
         bindLocation()
         bindTimeZone()
         bineProfile()
+        bindRouteInfo()
     }
     
     private func bindLocation() {
@@ -119,9 +121,34 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
     }
     
     private func bineProfile() {
-        profileViewModel.fetchUserProfile {
-            print("✅ 사용자 정보 로드 완료: \(self.profileViewModel.userProfile?.homeAddress ?? "주소 없음")")
-        }
+        profileViewModel.fetchUserProfile {}
+    }
+    
+    private func bindRouteInfo() {
+        homeViewModel.$routeInfoText
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] info in
+                self?.timeLabel.text = info
+                self?.timeLabel.isHidden = (info == nil)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func startRouting() {
+        guard let address = profileViewModel.userProfile?.homeAddress,
+              let userLocation = locationViewModel.currentLocation?.coordinate else { return }
+
+        homeViewModel.resolveDestinationCoordinate(from: address)
+
+        // 바인딩 통해 coordinate 도달 시점에 drawRouteIfNeeded 호출
+        homeViewModel.$destinationCoordinate
+            .compactMap { $0 }
+            .first()  // 최초 응답만 처리
+            .sink { [weak self] _ in
+                guard let self = self, let current = self.locationViewModel.currentLocation?.coordinate else { return }
+                self.homeViewModel.drawRouteIfNeeded(on: self.mapView, from: current)
+            }
+            .store(in: &cancellables)
     }
 }
 
@@ -129,48 +156,9 @@ extension HomeViewController {
     @objc private func startButtonTapped() {
         let alert = UIAlertController(title: "집으로 경로를 안내할까요?", message: nil, preferredStyle: .alert)
 
-        alert.addAction(UIAlertAction(title: "거절", style: .cancel, handler: { _ in
-            print("❌ 사용자가 경로 안내를 거절했습니다.")
-        }))
-
+        alert.addAction(UIAlertAction(title: "거절", style: .cancel))
         alert.addAction(UIAlertAction(title: "수락", style: .default, handler: { [weak self] _ in
-            guard let self = self else { return }
-
-            guard let address = self.profileViewModel.userProfile?.homeAddress, !address.isEmpty else {
-                print("🚨 homeAddress 없음")
-                return
-            }
-
-            guard let userLocation = self.locationViewModel.currentLocation?.coordinate else {
-                print("🚨 현재 위치 정보 없음")
-                return
-            }
-
-            let geocoder = CLGeocoder()
-            geocoder.geocodeAddressString(address) { placemarks, error in
-                if let error = error {
-                    print("❌ 주소 변환 실패: \(error.localizedDescription)")
-                    return
-                }
-
-                guard let destination = placemarks?.first?.location?.coordinate else {
-                    print("❌ 유효한 위치 정보 없음")
-                    return
-                }
-
-                DrawRouteUtils.drawRoute(
-                    on: self.mapView,
-                    from: userLocation,
-                    to: destination,
-                    withAnnotationTitle: "집으로",
-                    infoHandler: { infoText in
-                        DispatchQueue.main.async {
-                            self.timeLabel.text = infoText
-                            self.timeLabel.isHidden = false
-                        }
-                    }
-                )
-            }
+            self?.startRouting()
         }))
 
         present(alert, animated: true)
