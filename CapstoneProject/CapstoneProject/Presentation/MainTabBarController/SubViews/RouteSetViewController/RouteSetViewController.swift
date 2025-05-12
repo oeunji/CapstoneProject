@@ -15,20 +15,35 @@ final class RouteSetViewController: UIViewController {
     // MARK: - Properties
     private let mapView = MKMapView()
     private let locationManager = CLLocationManager()
-    private let searchBar = UISearchBar()
-    private let searchCompleter = MKLocalSearchCompleter()
-    private var resultViewHeightConstraint: Constraint?
-    private let resultView = SearchResultTableView()
+    private let routeSearchBar = UISearchBar()
+    private let routeSearchCompleter = MKLocalSearchCompleter()
+    private var routeResultViewHeightConstraint: Constraint?
+    private let routeSearchResultView = SearchResultTableView()
 
     // MARK: - UI Components
 
     // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        routeSearchBar.placeholder = "목적지를 검색하세요"
+        navigationItem.titleView = routeSearchBar
+        
         setupMap()
         configureUI()
         configureConstraints()
         configureSearch()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .white
+        appearance.shadowColor = .clear
+
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = appearance
     }
     
     // MARK: - Setup
@@ -41,10 +56,10 @@ final class RouteSetViewController: UIViewController {
     }
 
     private func configureSearch() {
-        searchBar.delegate = self
-        searchCompleter.delegate = self
+        routeSearchBar.delegate = self
+        routeSearchCompleter.delegate = self
 
-        resultView.onSelectResult = { [weak self] completion in
+        routeSearchResultView.onSelectResult = { [weak self] completion in
             let request = MKLocalSearch.Request(completion: completion)
             MKLocalSearch(request: request).start { response, _ in
                 guard let coordinate = response?.mapItems.first?.placemark.coordinate else { return }
@@ -53,7 +68,9 @@ final class RouteSetViewController: UIViewController {
                 annotation.title = completion.title
                 self?.mapView.addAnnotation(annotation)
                 self?.mapView.setCenter(coordinate, animated: true)
-                self?.searchBar.resignFirstResponder()
+                
+                self?.routeSearchBar.resignFirstResponder()
+                self?.routeSearchResultView.results = []
                 self?.resetResultViewHeight()
             }
         }
@@ -61,9 +78,9 @@ final class RouteSetViewController: UIViewController {
     }
     
     private func resetResultViewHeight() {
-        resultViewHeightConstraint?.deactivate()
-        resultView.snp.makeConstraints {
-            resultViewHeightConstraint = $0.height.equalTo(1).constraint
+        routeResultViewHeightConstraint?.deactivate()
+        routeSearchResultView.snp.makeConstraints {
+            routeResultViewHeightConstraint = $0.height.equalTo(0).constraint
         }
         UIView.animate(withDuration: 0.3) {
             self.view.layoutIfNeeded()
@@ -90,15 +107,15 @@ extension RouteSetViewController: CLLocationManagerDelegate {
 // MARK: - UISearchBarDelegate
 extension RouteSetViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        searchCompleter.queryFragment = searchText
+        routeSearchCompleter.queryFragment = searchText
     }
 
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
         searchBar.setShowsCancelButton(true, animated: true)
 
-        resultViewHeightConstraint?.deactivate()
-        resultView.snp.makeConstraints {
-            resultViewHeightConstraint = $0.bottom.equalTo(view.safeAreaLayoutGuide).constraint
+        routeResultViewHeightConstraint?.deactivate()
+        routeSearchResultView.snp.makeConstraints {
+            routeResultViewHeightConstraint = $0.bottom.equalTo(view.safeAreaLayoutGuide).constraint
         }
 
         UIView.animate(withDuration: 0.3) {
@@ -110,9 +127,9 @@ extension RouteSetViewController: UISearchBarDelegate {
         searchBar.resignFirstResponder()
         searchBar.setShowsCancelButton(false, animated: true)
 
-        resultViewHeightConstraint?.deactivate()
-        resultView.snp.makeConstraints {
-            resultViewHeightConstraint = $0.height.equalTo(1).constraint
+        routeResultViewHeightConstraint?.deactivate()
+        routeSearchResultView.snp.makeConstraints {
+            routeResultViewHeightConstraint = $0.height.equalTo(0).constraint
         }
 
         UIView.animate(withDuration: 0.3) {
@@ -124,7 +141,7 @@ extension RouteSetViewController: UISearchBarDelegate {
 // MARK: - MKLocalSearchCompleterDelegate
 extension RouteSetViewController: MKLocalSearchCompleterDelegate {
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        resultView.results = completer.results
+        routeSearchResultView.results = completer.results
     }
 }
 
@@ -133,7 +150,7 @@ extension RouteSetViewController {
     private func configureUI() {
         view.addSubview(mapView)
         
-        [searchBar, resultView].forEach {
+        [routeSearchResultView].forEach {
             view.addSubview($0)
         }
     }
@@ -142,17 +159,11 @@ extension RouteSetViewController {
         mapView.snp.makeConstraints {
             $0.edges.equalToSuperview()
         }
-        
-        searchBar.snp.makeConstraints {
-            $0.top.equalTo(view.safeAreaLayoutGuide)
-            $0.leading.trailing.equalToSuperview()
-            $0.height.equalTo(44)
-        }
 
-        resultView.snp.makeConstraints {
-            $0.top.equalTo(searchBar.snp.bottom)
+        routeSearchResultView.snp.makeConstraints {
+            $0.top.equalTo(view.safeAreaLayoutGuide).offset(0)
             $0.leading.trailing.equalToSuperview()
-            resultViewHeightConstraint = $0.height.equalTo(1).constraint  // 초기 높이
+            routeResultViewHeightConstraint = $0.height.equalTo(0).constraint
         }
     }
 }
