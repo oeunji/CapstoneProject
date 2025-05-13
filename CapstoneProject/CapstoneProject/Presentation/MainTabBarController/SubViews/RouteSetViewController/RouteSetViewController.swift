@@ -117,11 +117,127 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             confirmHandler: {
                 print("🚀 출발지 (사용자 위치): \(startCoordinate.latitude), \(startCoordinate.longitude)")
                 print("🏁 도착지 (마커 위치): \(destinationCoordinate.latitude), \(destinationCoordinate.longitude)")
-
-//                self.saveStartAndEndCoordinatesToFirestore(start: startCoordinate, end: destinationCoordinate)
+                
+                self.sendCoordinateToFlask(lat: startCoordinate.latitude, lng: startCoordinate.longitude, label: "start")
+                self.sendCoordinateToFlask(lat: destinationCoordinate.latitude, lng: destinationCoordinate.longitude, label: "end")
+                
+                self.fetchNodeIDsAndRequestRoute(start: startCoordinate, end: destinationCoordinate)
             }
         )
     }
+    
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        if let polyline = overlay as? MKPolyline {
+            let renderer = MKPolylineRenderer(polyline: polyline)
+            renderer.strokeColor = .systemBlue
+            renderer.lineWidth = 4
+            return renderer
+        }
+        return MKOverlayRenderer()
+    }
+
+    
+    private func requestRoute(from startNodeID: String, to endNodeID: String, mode: String = "shortest") {
+        let urlStr = "http://54.206.78.199:5000/find_route?start=\(startNodeID)&end=\(endNodeID)&mode=\(mode)"
+        guard let url = URL(string: urlStr) else { return }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let path = json["path"] as? [[String: Double]] else {
+                print("❌ 경로 요청 실패")
+                return
+            }
+
+            let coordinates = path.compactMap { dict -> CLLocationCoordinate2D? in
+                guard let lat = dict["lat"], let lng = dict["lng"] else { return nil }
+                return CLLocationCoordinate2D(latitude: lat, longitude: lng)
+            }
+
+            DispatchQueue.main.async {
+                self.mapView.removeOverlays(self.mapView.overlays)
+
+                let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+                self.mapView.addOverlay(polyline)
+
+                self.mapView.setVisibleMapRect(
+                    polyline.boundingMapRect,
+                    edgePadding: UIEdgeInsets(top: 80, left: 40, bottom: 100, right: 40),
+                    animated: true
+                )
+
+                print("✅ 경로 \(coordinates.count)개 점으로 출력 완료")
+            }
+        }.resume()
+    }
+
+    
+    private func fetchNodeIDsAndRequestRoute(start: CLLocationCoordinate2D, end: CLLocationCoordinate2D) {
+        requestNodeID(lat: start.latitude, lng: start.longitude) { startNodeID in
+            guard let startNodeID = startNodeID else { return }
+
+            self.requestNodeID(lat: end.latitude, lng: end.longitude) { endNodeID in
+                guard let endNodeID = endNodeID else { return }
+
+                self.requestRoute(from: startNodeID, to: endNodeID)
+            }
+        }
+    }
+    
+    private func requestNodeID(lat: Double, lng: Double, completion: @escaping (String?) -> Void) {
+        guard let url = URL(string: "http://54.206.78.199:5000/find_or_create_node") else {
+            completion(nil)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["lat": lat, "lng": lng]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let nodeId = json["node_id"] as? String else {
+                print("❌ node_id 요청 실패")
+                completion(nil)
+                return
+            }
+            print("✅ node_id 받아옴: \(nodeId)")
+            completion(nodeId)
+        }.resume()
+    }
+
+
+    
+    private func sendCoordinateToFlask(lat: Double, lng: Double, label: String) {
+        guard let url = URL(string: "http://54.206.78.199:5000/find_or_create_node") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = ["lat": lat, "lng": lng]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ [\(label)] 좌표 전송 실패: \(error.localizedDescription)")
+                return
+            }
+            guard let data = data else { return }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("✅ [\(label)] 전송 성공: \(json)")
+                }
+            } catch {
+                print("❗ [\(label)] 응답 파싱 실패: \(error)")
+            }
+        }.resume()
+    }
+
 
     
     // MARK: - Data Bind
