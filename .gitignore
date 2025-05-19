@@ -38,4 +38,6 @@ ApiKey.swift
 *.env
 *.swp
 
+Config.swift
+
 
