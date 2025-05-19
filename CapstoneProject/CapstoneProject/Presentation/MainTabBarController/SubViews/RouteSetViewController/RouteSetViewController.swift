@@ -9,9 +9,7 @@ import UIKit
 import MapKit
 import CoreLocation
 import SnapKit
-
 import FirebaseFirestore
-
 
 final class RouteSetViewController: UIViewController, MKMapViewDelegate {
 
@@ -36,7 +34,15 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
         collectionView.isHidden = true
         return collectionView
     }()
-
+    
+    private let timeLabel = UILabel().then {
+        $0.font = .appFont(.pretendardMedium, size: 14)
+        $0.textColor = .black
+        $0.numberOfLines = 1
+        $0.textAlignment = .center
+        $0.isHidden = true
+    }
+    
     // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -116,13 +122,21 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
                 print("🚀 출발지: \(startCoordinate.latitude), \(startCoordinate.longitude)")
                 print("🏁 도착지: \(destinationCoordinate.latitude), \(destinationCoordinate.longitude)")
 
-                self.sendCoordinateToFlask(lat: startCoordinate.latitude, lng: startCoordinate.longitude, label: "start") {
-                    self.startNodeID = $0
-                    self.sendCoordinateToFlask(lat: destinationCoordinate.latitude, lng: destinationCoordinate.longitude, label: "end") {
-                        self.endNodeID = $0
-                        if let startID = self.startNodeID, let endID = self.endNodeID {
-                            self.requestSafestNightRoute(from: startID, to: endID)
+                self.postCoordinate(lat: startCoordinate.latitude, lng: startCoordinate.longitude) { startNodeID in
+                    guard let startNodeID = startNodeID else {
+                        print("❌ 출발지 node_id 획득 실패")
+                        return
+                    }
+                    self.startNodeID = startNodeID
+
+                    self.postCoordinate(lat: destinationCoordinate.latitude, lng: destinationCoordinate.longitude) { endNodeID in
+                        guard let endNodeID = endNodeID else {
+                            print("❌ 도착지 node_id 획득 실패")
+                            return
                         }
+                        self.endNodeID = endNodeID
+
+                        self.requestSafestNightRoute(from: startNodeID, to: endNodeID)
                     }
                 }
             }
@@ -130,43 +144,54 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     }
     
     // MARK: - Path Request
-    private func requestSafestNightRoute(from startNodeID: String, to endNodeID: String, mode: String = "safest_night") {
-        let urlStr = "http://54.206.78.199:5000/find_route?start=\(startNodeID)&end=\(endNodeID)&mode=\(mode)"
+    private func requestSafestNightRoute(from startNodeID: String, to endNodeID: String, mode: String = "shortest") {
+        let urlStr = "\(Config.baseURL)/find_route?start=\(startNodeID)&end=\(endNodeID)&mode=\(mode)"
         guard let url = URL(string: urlStr) else { return }
+
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let path = json["path"] as? [[String: Double]] else {
+                  let path = json["path"] as? [[String: Double]],
+                  let distance = json["distance"] as? Double else {
                 print("❌ 경로 요청 실패")
                 return
             }
-            self.drawRoute(from: path)
+
+            self.drawRoute(from: path, distance: distance)
         }.resume()
     }
     
     // MARK: - Draw Route
-    private func drawRoute(from path: [[String: Double]]) {
+    private func drawRoute(from path: [[String: Double]], distance: Double) {
         let coordinates = path.compactMap { dict -> CLLocationCoordinate2D? in
             guard let lat = dict["lat"], let lng = dict["lng"] else { return nil }
             return CLLocationCoordinate2D(latitude: lat, longitude: lng)
         }
+
+        let km = distance / 1000.0
+        let time = Int(distance / 75.0)
+
         DispatchQueue.main.async {
             self.mapView.removeOverlays(self.mapView.overlays)
+
             let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
             self.mapView.addOverlay(polyline)
+
             self.mapView.setVisibleMapRect(
                 polyline.boundingMapRect,
                 edgePadding: UIEdgeInsets(top: 80, left: 40, bottom: 100, right: 40),
                 animated: true
             )
+
+            self.timeLabel.text = "🚶 거리: \(String(format: "%.1f", km))km   ⏱️ 예상 시간: \(time)분"
+            self.timeLabel.isHidden = false
             print("✅ 경로 \(coordinates.count)개 점으로 출력 완료")
         }
     }
     
-    // MARK: - Send Coordinate and Get NodeID
-    // MARK: - Send Coordinate and Get NodeID
-    private func sendCoordinateToFlask(lat: Double, lng: Double, label: String, completion: @escaping (String?) -> Void) {
-        guard let url = URL(string: "http://54.206.78.199:5000/find_or_create_node") else {
+    // MARK: - POST Coordinate
+    private func postCoordinate(lat: Double, lng: Double, completion: @escaping (String?) -> Void) {
+        guard let url = URL(string: "\(Config.baseURL)/find_or_create_node") else {
             completion(nil)
             return
         }
@@ -179,35 +204,33 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
 
         URLSession.shared.dataTask(with: request) { data, _, error in
             if let error = error {
-                print("❌ [\(label)] 좌표 전송 실패: \(error.localizedDescription)")
+                print("❌ 좌표 전송 실패: \(error.localizedDescription)")
                 completion(nil)
                 return
             }
 
             guard let data = data else {
-                print("❌ [\(label)] 응답 없음 (data == nil)")
+                print("❌ 응답 없음 (data == nil)")
                 completion(nil)
                 return
             }
 
             if let raw = String(data: data, encoding: .utf8) {
-                print("📦 [\(label)] 서버 응답 원문: \(raw)")
+                print("📦 서버 응답 원문: \(raw)")
             }
 
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let nodeIdValue = json["node_id"] else {
-                print("❌ [\(label)] 응답 파싱 실패")
+                print("❌ 응답 파싱 실패")
                 completion(nil)
                 return
             }
 
-            // nodeId가 Int든 String이든 문자열로 변환
             let nodeId = String(describing: nodeIdValue)
-            print("✅ [\(label)] node_id: \(nodeId)")
+            print("✅ node_id: \(nodeId)")
             completion(nodeId)
         }.resume()
     }
-
     
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if let polyline = overlay as? MKPolyline {
@@ -217,72 +240,6 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             return renderer
         }
         return MKOverlayRenderer()
-    }
-
-    private func fetchNodeIDsAndRequestRoute(start: CLLocationCoordinate2D, end: CLLocationCoordinate2D) {
-        requestNodeID(lat: start.latitude, lng: start.longitude) { startNodeID in
-            guard let startNodeID = startNodeID else { return }
-
-            self.requestNodeID(lat: end.latitude, lng: end.longitude) { endNodeID in
-                guard let endNodeID = endNodeID else { return }
-
-//                self.requestShortestRoute(from: startNodeID, to: endNodeID)
-//                self.requestSafestDayRoute(from: startNodeID, to: endNodeID)
-                self.requestSafestNightRoute(from: startNodeID, to: endNodeID)
-            }
-        }
-    }
-    
-    private func requestNodeID(lat: Double, lng: Double, completion: @escaping (String?) -> Void) {
-        guard let url = URL(string: "http://54.206.78.199:5000/find_or_create_node") else {
-            completion(nil)
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = ["lat": lat, "lng": lng]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let nodeId = json["node_id"] as? String else {
-                print("❌ node_id 요청 실패")
-                completion(nil)
-                return
-            }
-            print("✅ node_id 받아옴: \(nodeId)")
-            completion(nodeId)
-        }.resume()
-    }
-
-    private func sendCoordinateToFlask(lat: Double, lng: Double, label: String) {
-        guard let url = URL(string: "http://54.206.78.199:5000/find_or_create_node") else { return }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let body: [String: Any] = ["lat": lat, "lng": lng]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print("❌ [\(label)] 좌표 전송 실패: \(error.localizedDescription)")
-                return
-            }
-            guard let data = data else { return }
-
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("✅ [\(label)] 전송 성공: \(json)")
-                }
-            } catch {
-                print("❗ [\(label)] 응답 파싱 실패: \(error)")
-            }
-        }.resume()
     }
     
     // MARK: - Data Bind
@@ -353,7 +310,7 @@ extension RouteSetViewController {
     private func configureUI() {
         view.addSubview(mapView)
         
-        [routeSearchResultView, routeSelectCollectionView].forEach {
+        [routeSearchResultView, routeSelectCollectionView, timeLabel].forEach {
             view.addSubview($0)
         }
     }
@@ -373,6 +330,11 @@ extension RouteSetViewController {
             $0.horizontalEdges.equalToSuperview().offset(20)
             $0.centerY.equalToSuperview()
             $0.height.equalTo(300)
+        }
+        
+        timeLabel.snp.makeConstraints {
+            $0.top.equalTo(view.safeAreaLayoutGuide).offset(10)
+            $0.leading.trailing.equalToSuperview().inset(20)
         }
     }
 }

@@ -17,7 +17,7 @@ extension RouteDTO {
     static func dummy() -> [RouteDTO] {
         return [
             RouteDTO(type: "안전 경로", distance: "🚶 거리: 1.0km", time: "⏱️ 예상 시간: 13분"),
-            RouteDTO(type: "안전 경로", distance: "🚶 거리: 1.0km", time: "⏱️ 예상 시간: 13분")
+            RouteDTO(type: "최단 경로", distance: "🚶 거리: 1.0km", time: "⏱️ 예상 시간: 13분")
         ]
     }
 }
