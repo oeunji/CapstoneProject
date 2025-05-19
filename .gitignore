@@ -31,11 +31,13 @@ fastlane/screenshots/
 
 # Firebase / GoogleService
 GoogleService-Info.plist
-ApiKey.plist
+ApiKey.swift
 
 # 기타
 *.log
 *.env
 *.swp
+
+Config.swift
 
 
