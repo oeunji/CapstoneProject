@@ -14,6 +14,7 @@ import FirebaseFirestore
 final class RouteSetViewController: UIViewController, MKMapViewDelegate {
 
     // MARK: - Properties
+    private let viewModel = RouteSetViewModel()
     private let mapView = MKMapView()
     private let locationManager = CLLocationManager()
     private let routeSearchBar = UISearchBar()
@@ -21,8 +22,6 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     private var routeResultViewHeightConstraint: Constraint?
     private let routeSearchResultView = SearchResultTableView()
     private var currentUserCoordinate: CLLocationCoordinate2D?
-    private var startNodeID: String?
-    private var endNodeID: String?
 
     // MARK: - UI Components
     private let routeSelectCollectionView: RouteSelectCollectionView = {
@@ -52,6 +51,7 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
         configureUI()
         configureConstraints()
         configureSearch()
+        bindViewModel()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -65,6 +65,19 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
 
         navigationController?.navigationBar.standardAppearance = appearance
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
+    }
+    
+    // MARK: - Data Bind
+    private func bindViewModel() {
+        viewModel.onRouteReceived = { [weak self] coordinates, distance in
+            self?.drawRoute(coordinates: coordinates, distance: distance)
+        }
+        viewModel.onError = { [weak self] message in
+            DispatchQueue.main.async {
+                // 에러 처리 UI 띄우기
+                print("Error: \(message)")
+            }
+        }
     }
     
     // MARK: - Setup
@@ -107,67 +120,9 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             self.view.layoutIfNeeded()
         }
     }
-
-    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
-        guard let destinationCoordinate = view.annotation?.coordinate,
-              !(view.annotation is MKUserLocation),
-              let startCoordinate = currentUserCoordinate else { return }
-
-        AlertUtils.showConfirmationAlert(
-            title: "경로 안내를 시작할까요?",
-            confirmTitle: "시작",
-            cancelTitle: "취소",
-            from: self,
-            confirmHandler: {
-                print("🚀 출발지: \(startCoordinate.latitude), \(startCoordinate.longitude)")
-                print("🏁 도착지: \(destinationCoordinate.latitude), \(destinationCoordinate.longitude)")
-
-                self.postCoordinate(lat: startCoordinate.latitude, lng: startCoordinate.longitude) { startNodeID in
-                    guard let startNodeID = startNodeID else {
-                        print("❌ 출발지 node_id 획득 실패")
-                        return
-                    }
-                    self.startNodeID = startNodeID
-
-                    self.postCoordinate(lat: destinationCoordinate.latitude, lng: destinationCoordinate.longitude) { endNodeID in
-                        guard let endNodeID = endNodeID else {
-                            print("❌ 도착지 node_id 획득 실패")
-                            return
-                        }
-                        self.endNodeID = endNodeID
-
-                        self.requestSafestNightRoute(from: startNodeID, to: endNodeID)
-                    }
-                }
-            }
-        )
-    }
-    
-    // MARK: - Path Request
-    private func requestSafestNightRoute(from startNodeID: String, to endNodeID: String, mode: String = "shortest") {
-        let urlStr = "\(Config.baseURL)/find_route?start=\(startNodeID)&end=\(endNodeID)&mode=\(mode)"
-        guard let url = URL(string: urlStr) else { return }
-
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let path = json["path"] as? [[String: Double]],
-                  let distance = json["distance"] as? Double else {
-                print("❌ 경로 요청 실패")
-                return
-            }
-
-            self.drawRoute(from: path, distance: distance)
-        }.resume()
-    }
     
     // MARK: - Draw Route
-    private func drawRoute(from path: [[String: Double]], distance: Double) {
-        let coordinates = path.compactMap { dict -> CLLocationCoordinate2D? in
-            guard let lat = dict["lat"], let lng = dict["lng"] else { return nil }
-            return CLLocationCoordinate2D(latitude: lat, longitude: lng)
-        }
-
+    private func drawRoute(coordinates: [CLLocationCoordinate2D], distance: Double) {
         let km = distance / 1000.0
         let time = Int(distance / 75.0)
 
@@ -188,49 +143,28 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             print("✅ 경로 \(coordinates.count)개 점으로 출력 완료")
         }
     }
-    
-    // MARK: - POST Coordinate
-    private func postCoordinate(lat: Double, lng: Double, completion: @escaping (String?) -> Void) {
-        guard let url = URL(string: "\(Config.baseURL)/find_or_create_node") else {
-            completion(nil)
+
+    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+        guard let destinationCoordinate = view.annotation?.coordinate,
+              !(view.annotation is MKUserLocation),
+              let startCoordinate = locationManager.location?.coordinate else {
+            print("현재 위치를 가져올 수 없습니다.")
             return
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = ["lat": lat, "lng": lng]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        URLSession.shared.dataTask(with: request) { data, _, error in
-            if let error = error {
-                print("❌ 좌표 전송 실패: \(error.localizedDescription)")
-                completion(nil)
-                return
+        AlertUtils.showConfirmationAlert(
+            title: "경로 안내를 시작할까요?",
+            confirmTitle: "시작",
+            cancelTitle: "취소",
+            from: self,
+            confirmHandler: {
+                print("🚀 출발지: \(startCoordinate.latitude), \(startCoordinate.longitude)")
+                print("🏁 도착지: \(destinationCoordinate.latitude), \(destinationCoordinate.longitude)")
+                self.viewModel.requestRoute(startCoordinate: startCoordinate, endCoordinate: destinationCoordinate)
             }
-
-            guard let data = data else {
-                print("❌ 응답 없음 (data == nil)")
-                completion(nil)
-                return
-            }
-
-            if let raw = String(data: data, encoding: .utf8) {
-                print("📦 서버 응답 원문: \(raw)")
-            }
-
-            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let nodeIdValue = json["node_id"] else {
-                print("❌ 응답 파싱 실패")
-                completion(nil)
-                return
-            }
-
-            let nodeId = String(describing: nodeIdValue)
-            print("✅ node_id: \(nodeId)")
-            completion(nodeId)
-        }.resume()
+        )
     }
+
     
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if let polyline = overlay as? MKPolyline {
@@ -241,8 +175,6 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
         }
         return MKOverlayRenderer()
     }
-    
-    // MARK: - Data Bind
 }
 
 // MARK: - @objc
