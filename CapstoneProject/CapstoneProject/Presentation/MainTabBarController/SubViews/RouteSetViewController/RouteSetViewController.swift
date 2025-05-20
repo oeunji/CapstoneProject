@@ -22,6 +22,7 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     private var routeResultViewHeightConstraint: Constraint?
     private let routeSearchResultView = SearchResultTableView()
     private var currentUserCoordinate: CLLocationCoordinate2D?
+    private let timeZoneViewModel = TimeZoneViewModel()
 
     // MARK: - UI Components
     private let routeSelectCollectionView: RouteSelectCollectionView = {
@@ -170,16 +171,11 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
                     startCoordinate: startCoordinate,
                     endCoordinate: destinationCoordinate
                 )
-
                 
                 self.viewModel.onMultipleRoutesReceived = { [weak self] dtoList in
                     self?.routeSelectCollectionView.updateData(dtoList)
                     self?.routeSelectCollectionView.isHidden = false
                 }
-
-                // 필요시 다른 경로도 병렬 요청 가능
-                // self.viewModel.requestSafestDayRoute(...)
-                // self.viewModel.requestSafestNightRoute(...)
             }
         )
     }
@@ -233,6 +229,8 @@ extension RouteSetViewController: UISearchBarDelegate {
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
         searchBar.setShowsCancelButton(true, animated: true)
 
+        timeLabel.isHidden = true
+        
         routeResultViewHeightConstraint?.deactivate()
         routeSearchResultView.snp.makeConstraints {
             routeResultViewHeightConstraint = $0.bottom.equalTo(view.safeAreaLayoutGuide).constraint
@@ -247,6 +245,8 @@ extension RouteSetViewController: UISearchBarDelegate {
         searchBar.resignFirstResponder()
         searchBar.setShowsCancelButton(false, animated: true)
 
+        timeLabel.isHidden = false
+        
         routeResultViewHeightConstraint?.deactivate()
         routeSearchResultView.snp.makeConstraints {
             routeResultViewHeightConstraint = $0.height.equalTo(0).constraint

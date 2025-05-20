@@ -16,8 +16,10 @@ final class RouteSetViewModel {
     private(set) var endNodeID: String?
 
     var onRouteReceived: (([CLLocationCoordinate2D], Double, String) -> Void)?
-    var onMultipleRoutesReceived: (([RouteDTO]) -> Void)? // ✅ 요거 추가
+    var onMultipleRoutesReceived: (([RouteDTO]) -> Void)?
     var onError: ((String) -> Void)?
+    
+    private let timeZoneViewModel = TimeZoneViewModel()
 
     // MARK: - Node ID 요청
     private func postCoordinate(lat: Double, lng: Double, completion: @escaping (String?) -> Void) {
@@ -74,28 +76,13 @@ final class RouteSetViewModel {
     }
     
     // MARK: - 세부 요청 함수
-    func requestShortestRoute(
+    func requestRouteByMode(
+        _ mode: String,
         startCoordinate: CLLocationCoordinate2D,
         endCoordinate: CLLocationCoordinate2D,
         completion: @escaping ([CLLocationCoordinate2D], Double, String) -> Void
     ) {
-        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "shortest", completion: completion)
-    }
-
-    func requestSafestDayRoute(
-        startCoordinate: CLLocationCoordinate2D,
-        endCoordinate: CLLocationCoordinate2D,
-        completion: @escaping ([CLLocationCoordinate2D], Double, String) -> Void
-    ) {
-        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "safest_day", completion: completion)
-    }
-
-    func requestSafestNightRoute(
-        startCoordinate: CLLocationCoordinate2D,
-        endCoordinate: CLLocationCoordinate2D,
-        completion: @escaping ([CLLocationCoordinate2D], Double, String) -> Void
-    ) {
-        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "safest_night", completion: completion)
+        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: mode, completion: completion)
     }
 
     func requestAllRoutes(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D) {
@@ -103,19 +90,66 @@ final class RouteSetViewModel {
         let group = DispatchGroup()
 
         group.enter()
-        requestShortestRoute(startCoordinate: startCoordinate, endCoordinate: endCoordinate) { coordinates, distance, _ in
-            results[0] = RouteDTO(type: "최단 경로", distance: String(format: "%.1fkm", distance / 1000), time: "\(Int(distance / 75.0))분", mode: "shortest", coordinates: coordinates)
+        requestRouteByMode("shortest", startCoordinate: startCoordinate, endCoordinate: endCoordinate) { coordinates, distance, _ in
+            results[0] = self.makeRouteDTO(label: "최단 경로", mode: "shortest", distance: distance, coordinates: coordinates)
             group.leave()
         }
 
-        group.enter()
-        requestSafestDayRoute(startCoordinate: startCoordinate, endCoordinate: endCoordinate) { coordinates, distance, _ in
-            results[1] = RouteDTO(type: "안전 경로", distance: String(format: "%.1fkm", distance / 1000), time: "\(Int(distance / 75.0))분", mode: "safest_day", coordinates: coordinates)
-            group.leave()
+        requestSafetyRouteBasedOnTime(startCoordinate: startCoordinate, endCoordinate: endCoordinate, group: group) { dto in
+            results[1] = dto
         }
 
         group.notify(queue: .main) {
             self.onMultipleRoutesReceived?(results.compactMap { $0 })
+        }
+    }
+
+    private func makeRouteDTO(
+        label: String,
+        mode: String,
+        distance: Double,
+        coordinates: [CLLocationCoordinate2D]
+    ) -> RouteDTO {
+        return RouteDTO(
+            type: label,
+            distance: String(format: "%.1fkm", distance / 1000),
+            time: "\(Int(distance / 75.0))분",
+            mode: mode,
+            coordinates: coordinates
+        )
+    }
+
+    private func requestSafetyRouteBasedOnTime(
+        startCoordinate: CLLocationCoordinate2D,
+        endCoordinate: CLLocationCoordinate2D,
+        group: DispatchGroup,
+        completion: @escaping (RouteDTO?) -> Void
+    ) {
+        group.enter()
+        TimeZoneService.fetchTimeZone(lat: startCoordinate.latitude, lng: startCoordinate.longitude) { [weak self] result in
+            guard let self = self else {
+                group.leave()
+                completion(nil)
+                return
+            }
+
+            switch result {
+            case .success(let dayOrNight):
+                let isDay = (dayOrNight == "day")
+                let mode = isDay ? "safest_day" : "safest_night"
+                let label = isDay ? "낮 안전 경로" : "밤 안전 경로"
+
+                self.requestRouteByMode(mode, startCoordinate: startCoordinate, endCoordinate: endCoordinate) { coordinates, distance, _ in
+                    let dto = self.makeRouteDTO(label: label, mode: mode, distance: distance, coordinates: coordinates)
+                    group.leave()
+                    completion(dto)
+                }
+
+            case .failure(let error):
+                self.onError?("시간대 판단 실패: \(error.localizedDescription)")
+                group.leave()
+                completion(nil)
+            }
         }
     }
     
@@ -158,5 +192,4 @@ final class RouteSetViewModel {
                 }
             }
     }
-
 }
