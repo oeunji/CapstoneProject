@@ -7,10 +7,15 @@
 
 import UIKit
 
-final class RouteSelectCollectionView: UICollectionView, UICollectionViewDataSource {
+protocol RouteSelectCollectionViewDelegate: AnyObject {
+    func didSelectRouteItem(_ route: RouteDTO)
+}
 
-    private var itemData = RouteDTO.dummy()
+final class RouteSelectCollectionView: UICollectionView, UICollectionViewDataSource, UICollectionViewDelegate {
 
+    private var itemData: [RouteDTO] = []
+    weak var routeDelegate: RouteSelectCollectionViewDelegate?
+    
     init() {
         let flowLayout = UICollectionViewFlowLayout()
         flowLayout.scrollDirection = .horizontal
@@ -20,6 +25,7 @@ final class RouteSelectCollectionView: UICollectionView, UICollectionViewDataSou
 
         self.backgroundColor = .clear
         self.dataSource = self
+        self.delegate = self
         register()
     }
 
@@ -29,6 +35,11 @@ final class RouteSelectCollectionView: UICollectionView, UICollectionViewDataSou
 
     private func register() {
         register(RouteSelectCollectionViewCell.self, forCellWithReuseIdentifier: RouteSelectCollectionViewCell.identifier)
+    }
+    
+    func updateData(_ newData: [RouteDTO]) {
+        self.itemData = newData
+        self.reloadData()
     }
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -41,5 +52,10 @@ final class RouteSelectCollectionView: UICollectionView, UICollectionViewDataSou
         }
         cell.dataBind(itemData[indexPath.item], itemRow: indexPath.item)
         return cell
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let selectedRoute = itemData[indexPath.item]
+        routeDelegate?.didSelectRouteItem(selectedRoute)
     }
 }

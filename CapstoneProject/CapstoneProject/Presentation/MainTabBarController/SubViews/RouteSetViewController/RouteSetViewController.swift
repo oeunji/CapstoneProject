@@ -41,13 +41,16 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         routeSearchBar.placeholder = "목적지를 검색하세요"
         navigationItem.titleView = routeSearchBar
         setupMap()
         configureUI()
         configureConstraints()
         configureSearch()
+        
         bindViewModel()
+        routeSelectCollectionView.routeDelegate = self
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -67,9 +70,12 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     private func bindViewModel() {
         viewModel.onRouteReceived = { [weak self] coordinates, distance, mode in
             self?.drawRoute(coordinates: coordinates, distance: distance)
-
-            // mode별로 색상 다르게 처리하거나, 표시용 라벨 변경 등의 작업도 가능
             print("🔁 mode: \(mode) 경로 수신 완료")
+        }
+
+        viewModel.onMultipleRoutesReceived = { [weak self] dtoList in
+            self?.routeSelectCollectionView.updateData(dtoList)
+            self?.routeSelectCollectionView.isHidden = false
         }
 
         viewModel.onError = { [weak self] message in
@@ -159,9 +165,17 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             confirmHandler: {
                 print("🚀 출발지: \(startCoordinate.latitude), \(startCoordinate.longitude)")
                 print("🏁 도착지: \(destinationCoordinate.latitude), \(destinationCoordinate.longitude)")
+                
+                self.viewModel.requestAllRoutes(
+                    startCoordinate: startCoordinate,
+                    endCoordinate: destinationCoordinate
+                )
 
-                // 예시: 최단 경로 요청
-                self.viewModel.requestShortestRoute(startCoordinate: startCoordinate, endCoordinate: destinationCoordinate)
+                
+                self.viewModel.onMultipleRoutesReceived = { [weak self] dtoList in
+                    self?.routeSelectCollectionView.updateData(dtoList)
+                    self?.routeSelectCollectionView.isHidden = false
+                }
 
                 // 필요시 다른 경로도 병렬 요청 가능
                 // self.viewModel.requestSafestDayRoute(...)
@@ -183,6 +197,16 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
 
 // MARK: - @objc
 extension RouteSetViewController {
+}
+
+extension RouteSetViewController: RouteSelectCollectionViewDelegate {
+    func didSelectRouteItem(_ route: RouteDTO) {
+        let distanceValue = Double(route.distance.replacingOccurrences(of: "km", with: "")) ?? 0
+        let distanceInMeter = distanceValue * 1000
+        drawRoute(coordinates: route.coordinates, distance: distanceInMeter)
+        print("✅ \(route.mode) 경로를 지도에 다시 출력했습니다.")
+        routeSelectCollectionView.isHidden = true
+    }
 }
 
 // MARK: - CLLocationManagerDelegate

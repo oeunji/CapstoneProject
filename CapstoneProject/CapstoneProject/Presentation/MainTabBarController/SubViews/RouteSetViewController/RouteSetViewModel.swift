@@ -16,6 +16,7 @@ final class RouteSetViewModel {
     private(set) var endNodeID: String?
 
     var onRouteReceived: (([CLLocationCoordinate2D], Double, String) -> Void)?
+    var onMultipleRoutesReceived: (([RouteDTO]) -> Void)? // ✅ 요거 추가
     var onError: ((String) -> Void)?
 
     // MARK: - Node ID 요청
@@ -45,7 +46,12 @@ final class RouteSetViewModel {
     }
 
     // MARK: - 공통 경로 요청 진입점
-    private func requestRouteFlow(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D, mode: String) {
+    private func requestRouteFlow(
+        startCoordinate: CLLocationCoordinate2D,
+        endCoordinate: CLLocationCoordinate2D,
+        mode: String,
+        completion: @escaping ([CLLocationCoordinate2D], Double, String) -> Void
+    ) {
         postCoordinate(lat: startCoordinate.latitude, lng: startCoordinate.longitude) { startID in
             guard let startID = startID else {
                 self.onError?("출발지 노드 ID 획득 실패")
@@ -60,26 +66,66 @@ final class RouteSetViewModel {
                 }
                 self.endNodeID = endID
 
-                self.requestRoute(from: startID, to: endID, mode: mode)
+                self.requestRoute(from: startID, to: endID, mode: mode) { coordinates, distance, mode in
+                    completion(coordinates, distance, mode)
+                }
             }
         }
     }
     
     // MARK: - 세부 요청 함수
-    func requestShortestRoute(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D) {
-        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "shortest")
+    func requestShortestRoute(
+        startCoordinate: CLLocationCoordinate2D,
+        endCoordinate: CLLocationCoordinate2D,
+        completion: @escaping ([CLLocationCoordinate2D], Double, String) -> Void
+    ) {
+        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "shortest", completion: completion)
     }
 
-    func requestSafestDayRoute(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D) {
-        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "safest_day")
+    func requestSafestDayRoute(
+        startCoordinate: CLLocationCoordinate2D,
+        endCoordinate: CLLocationCoordinate2D,
+        completion: @escaping ([CLLocationCoordinate2D], Double, String) -> Void
+    ) {
+        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "safest_day", completion: completion)
     }
 
-    func requestSafestNightRoute(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D) {
-        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "safest_night")
+    func requestSafestNightRoute(
+        startCoordinate: CLLocationCoordinate2D,
+        endCoordinate: CLLocationCoordinate2D,
+        completion: @escaping ([CLLocationCoordinate2D], Double, String) -> Void
+    ) {
+        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "safest_night", completion: completion)
+    }
+
+    func requestAllRoutes(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D) {
+        var results: [RouteDTO?] = [nil, nil]
+        let group = DispatchGroup()
+
+        group.enter()
+        requestShortestRoute(startCoordinate: startCoordinate, endCoordinate: endCoordinate) { coordinates, distance, _ in
+            results[0] = RouteDTO(type: "최단 경로", distance: String(format: "%.1fkm", distance / 1000), time: "\(Int(distance / 75.0))분", mode: "shortest", coordinates: coordinates)
+            group.leave()
+        }
+
+        group.enter()
+        requestSafestDayRoute(startCoordinate: startCoordinate, endCoordinate: endCoordinate) { coordinates, distance, _ in
+            results[1] = RouteDTO(type: "안전 경로", distance: String(format: "%.1fkm", distance / 1000), time: "\(Int(distance / 75.0))분", mode: "safest_day", coordinates: coordinates)
+            group.leave()
+        }
+
+        group.notify(queue: .main) {
+            self.onMultipleRoutesReceived?(results.compactMap { $0 })
+        }
     }
     
     // MARK: - 실제 API 요청
-    private func requestRoute(from startNodeID: String, to endNodeID: String, mode: String) {
+    private func requestRoute(
+        from startNodeID: String,
+        to endNodeID: String,
+        mode: String,
+        completion: @escaping ([CLLocationCoordinate2D], Double, String) -> Void
+    ) {
         let url = "\(Config.baseURL)/find_route"
         let parameters: [String: String] = [
             "start": startNodeID,
@@ -104,7 +150,7 @@ final class RouteSetViewModel {
                         return CLLocationCoordinate2D(latitude: lat, longitude: lng)
                     }
 
-                    self.onRouteReceived?(coordinates, distance, mode)
+                    completion(coordinates, distance, mode)
 
                 case .failure(let error):
                     print("❌ 경로 요청 실패: \(error.localizedDescription)")
@@ -112,4 +158,5 @@ final class RouteSetViewModel {
                 }
             }
     }
+
 }
