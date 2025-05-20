@@ -7,32 +7,55 @@
 
 import UIKit
 
-final class RouteSelectCollectionView: UICollectionView, UICollectionViewDataSource {
+protocol RouteSelectCollectionViewDelegate: AnyObject {
+    func didSelectRouteItem(_ route: RouteDTO)
+}
+
+final class RouteSelectCollectionView: UICollectionView, UICollectionViewDataSource, UICollectionViewDelegate {
+
+    private var itemData: [RouteDTO] = []
+    weak var routeDelegate: RouteSelectCollectionViewDelegate?
     
-    private var itemData = RouteDTO.dummy()
-    
-    override init(frame: CGRect, collectionViewLayout layout: UICollectionViewLayout) {
-        super.init(frame: frame, collectionViewLayout: layout)
+    init() {
+        let flowLayout = UICollectionViewFlowLayout()
+        flowLayout.scrollDirection = .horizontal
+        flowLayout.itemSize = .init(width: UIScreen.main.bounds.width - 40, height: 140)
+        flowLayout.minimumLineSpacing = 10
+        super.init(frame: .zero, collectionViewLayout: flowLayout)
+
         self.backgroundColor = .clear
         self.dataSource = self
+        self.delegate = self
         register()
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     private func register() {
         register(RouteSelectCollectionViewCell.self, forCellWithReuseIdentifier: RouteSelectCollectionViewCell.identifier)
     }
     
+    func updateData(_ newData: [RouteDTO]) {
+        self.itemData = newData
+        self.reloadData()
+    }
+
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return itemData.count
     }
-    
+
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: RouteSelectCollectionViewCell.identifier, for: indexPath) as? RouteSelectCollectionViewCell else { return UICollectionViewCell() }
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: RouteSelectCollectionViewCell.identifier, for: indexPath) as? RouteSelectCollectionViewCell else {
+            return UICollectionViewCell()
+        }
         cell.dataBind(itemData[indexPath.item], itemRow: indexPath.item)
         return cell
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let selectedRoute = itemData[indexPath.item]
+        routeDelegate?.didSelectRouteItem(selectedRoute)
     }
 }

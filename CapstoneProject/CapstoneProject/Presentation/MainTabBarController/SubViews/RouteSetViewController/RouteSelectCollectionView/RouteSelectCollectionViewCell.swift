@@ -84,8 +84,8 @@ final class RouteSelectCollectionViewCell: UICollectionViewCell {
 extension RouteSelectCollectionViewCell {
     func dataBind(_ itemData: RouteDTO, itemRow: Int) {
         type.text = itemData.type
-        distance.text = itemData.distance
-        time.text = itemData.time
+        distance.text = "🚶 거리: \(itemData.distance)"
+        time.text = "⏱️ 예상 시간: \(itemData.time)"
         self.itemRow = itemRow
     }
 }
