@@ -7,7 +7,7 @@
 
 import UIKit
 
-class MainTabBarController: UITabBarController {
+final class MainTabBarController: UITabBarController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -15,7 +15,7 @@ class MainTabBarController: UITabBarController {
         setupTabBarAppearance()
     }
 
-    func configureController() {
+    private func configureController() {
         let home = tabBarNavigationController(
             unselectedImage: symbolImage(name: "house"),
             selectedImage: symbolImage(name: "house.fill"),
@@ -48,26 +48,25 @@ class MainTabBarController: UITabBarController {
         tabBar.tintColor = .black
     }
 
-    func setupTabBarAppearance() {
+    private func setupTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor.appColor(.mainYellow)
 
         let itemAppearance = UITabBarItemAppearance()
-        let font = UIFont.appFont(.pretendardRegular, size: 12)
 
         appearance.stackedLayoutAppearance = itemAppearance
         tabBar.standardAppearance = appearance
         tabBar.scrollEdgeAppearance = appearance
     }
 
-    func tabBarNavigationController(unselectedImage: UIImage, selectedImage: UIImage, rootViewController: UIViewController, title: String) -> UINavigationController {
+    private func tabBarNavigationController(unselectedImage: UIImage, selectedImage: UIImage, rootViewController: UIViewController, title: String) -> UINavigationController {
         let navigation = UINavigationController(rootViewController: rootViewController)
         navigation.tabBarItem = UITabBarItem(title: title, image: unselectedImage, selectedImage: selectedImage)
         return navigation
     }
     
-    func symbolImage(name: String) -> UIImage {
+    private func symbolImage(name: String) -> UIImage {
         return UIImage(systemName: name)?.withRenderingMode(.alwaysTemplate) ?? UIImage()
     }
 }
