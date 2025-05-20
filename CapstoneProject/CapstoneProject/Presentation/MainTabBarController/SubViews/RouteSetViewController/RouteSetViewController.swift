@@ -155,7 +155,7 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             confirmHandler: {
                 print("🚀 출발지: \(startCoordinate.latitude), \(startCoordinate.longitude)")
                 print("🏁 도착지: \(destinationCoordinate.latitude), \(destinationCoordinate.longitude)")
-                self.viewModel.requestRoute(startCoordinate: startCoordinate, endCoordinate: destinationCoordinate)
+                self.viewModel.requestRoutes(startCoordinate: startCoordinate, endCoordinate: destinationCoordinate)
             }
         )
     }

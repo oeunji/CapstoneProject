@@ -44,8 +44,28 @@ final class RouteSetViewModel {
             }
     }
 
-    // MARK: - 출발지, 도착지 노드 ID 가져오기 + 경로 요청
-    func requestRoute(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D, mode: String = "shortest") {
+    // MARK: - 최단 거리 : 출발지, 도착지 노드 ID 가져오기 + 경로 요청
+    func requestRoutes(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D, mode: String = "shortest") {
+        postCoordinate(lat: startCoordinate.latitude, lng: startCoordinate.longitude) { startID in
+            guard let startID = startID else {
+                self.onError?("출발지 노드 ID 획득 실패")
+                return
+            }
+            self.startNodeID = startID
+
+            self.postCoordinate(lat: endCoordinate.latitude, lng: endCoordinate.longitude) { endID in
+                guard let endID = endID else {
+                    self.onError?("도착지 노드 ID 획득 실패")
+                    return
+                }
+                self.endNodeID = endID
+
+                self.requestSafestNightRoute(from: startID, to: endID, mode: mode)
+            }
+        }
+    }
+    
+    func requestSafestDayRoute(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D, mode: String = "safest_day") {
         postCoordinate(lat: startCoordinate.latitude, lng: startCoordinate.longitude) { startID in
             guard let startID = startID else {
                 self.onError?("출발지 노드 ID 획득 실패")
