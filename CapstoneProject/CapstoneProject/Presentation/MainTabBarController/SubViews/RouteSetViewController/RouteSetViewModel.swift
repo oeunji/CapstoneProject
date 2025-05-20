@@ -15,11 +15,11 @@ final class RouteSetViewModel {
     private(set) var startNodeID: String?
     private(set) var endNodeID: String?
 
-    var onRouteReceived: (([CLLocationCoordinate2D], Double) -> Void)?
+    var onRouteReceived: (([CLLocationCoordinate2D], Double, String) -> Void)?
     var onError: ((String) -> Void)?
 
-    // MARK: - Coordinate 전송 및 NodeID 획득
-    func postCoordinate(lat: Double, lng: Double, completion: @escaping (String?) -> Void) {
+    // MARK: - Node ID 요청
+    private func postCoordinate(lat: Double, lng: Double, completion: @escaping (String?) -> Void) {
         let url = "\(Config.baseURL)/find_or_create_node"
         let parameters: [String: Any] = ["lat": lat, "lng": lng]
 
@@ -44,8 +44,8 @@ final class RouteSetViewModel {
             }
     }
 
-    // MARK: - 최단 거리 : 출발지, 도착지 노드 ID 가져오기 + 경로 요청
-    func requestRoutes(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D, mode: String = "shortest") {
+    // MARK: - 공통 경로 요청 진입점
+    private func requestRouteFlow(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D, mode: String) {
         postCoordinate(lat: startCoordinate.latitude, lng: startCoordinate.longitude) { startID in
             guard let startID = startID else {
                 self.onError?("출발지 노드 ID 획득 실패")
@@ -60,33 +60,26 @@ final class RouteSetViewModel {
                 }
                 self.endNodeID = endID
 
-                self.requestSafestNightRoute(from: startID, to: endID, mode: mode)
+                self.requestRoute(from: startID, to: endID, mode: mode)
             }
         }
     }
     
-    func requestSafestDayRoute(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D, mode: String = "safest_day") {
-        postCoordinate(lat: startCoordinate.latitude, lng: startCoordinate.longitude) { startID in
-            guard let startID = startID else {
-                self.onError?("출발지 노드 ID 획득 실패")
-                return
-            }
-            self.startNodeID = startID
-
-            self.postCoordinate(lat: endCoordinate.latitude, lng: endCoordinate.longitude) { endID in
-                guard let endID = endID else {
-                    self.onError?("도착지 노드 ID 획득 실패")
-                    return
-                }
-                self.endNodeID = endID
-
-                self.requestSafestNightRoute(from: startID, to: endID, mode: mode)
-            }
-        }
+    // MARK: - 세부 요청 함수
+    func requestShortestRoute(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D) {
+        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "shortest")
     }
 
-    // MARK: - 경로 요청
-    private func requestSafestNightRoute(from startNodeID: String, to endNodeID: String, mode: String) {
+    func requestSafestDayRoute(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D) {
+        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "safest_day")
+    }
+
+    func requestSafestNightRoute(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D) {
+        requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: "safest_night")
+    }
+    
+    // MARK: - 실제 API 요청
+    private func requestRoute(from startNodeID: String, to endNodeID: String, mode: String) {
         let url = "\(Config.baseURL)/find_route"
         let parameters: [String: String] = [
             "start": startNodeID,
@@ -102,7 +95,7 @@ final class RouteSetViewModel {
                     guard let json = value as? [String: Any],
                           let path = json["path"] as? [[String: Double]],
                           let distance = json["distance"] as? Double else {
-                        self.onError?("경로 요청 실패")
+                        self.onError?("경로 응답 파싱 실패")
                         return
                     }
 
@@ -111,7 +104,7 @@ final class RouteSetViewModel {
                         return CLLocationCoordinate2D(latitude: lat, longitude: lng)
                     }
 
-                    self.onRouteReceived?(coordinates, distance)
+                    self.onRouteReceived?(coordinates, distance, mode)
 
                 case .failure(let error):
                     print("❌ 경로 요청 실패: \(error.localizedDescription)")

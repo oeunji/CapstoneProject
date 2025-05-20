@@ -26,7 +26,7 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     // MARK: - UI Components
     private let routeSelectCollectionView: RouteSelectCollectionView = {
         let collectionView = RouteSelectCollectionView()
-        collectionView.isHidden = false
+        collectionView.isHidden = true
         return collectionView
     }()
     
@@ -65,9 +65,13 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     
     // MARK: - Data Bind
     private func bindViewModel() {
-        viewModel.onRouteReceived = { [weak self] coordinates, distance in
+        viewModel.onRouteReceived = { [weak self] coordinates, distance, mode in
             self?.drawRoute(coordinates: coordinates, distance: distance)
+
+            // mode별로 색상 다르게 처리하거나, 표시용 라벨 변경 등의 작업도 가능
+            print("🔁 mode: \(mode) 경로 수신 완료")
         }
+
         viewModel.onError = { [weak self] message in
             DispatchQueue.main.async {
                 print("Error: \(message)")
@@ -155,7 +159,13 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             confirmHandler: {
                 print("🚀 출발지: \(startCoordinate.latitude), \(startCoordinate.longitude)")
                 print("🏁 도착지: \(destinationCoordinate.latitude), \(destinationCoordinate.longitude)")
-                self.viewModel.requestRoutes(startCoordinate: startCoordinate, endCoordinate: destinationCoordinate)
+
+                // 예시: 최단 경로 요청
+                self.viewModel.requestShortestRoute(startCoordinate: startCoordinate, endCoordinate: destinationCoordinate)
+
+                // 필요시 다른 경로도 병렬 요청 가능
+                // self.viewModel.requestSafestDayRoute(...)
+                // self.viewModel.requestSafestNightRoute(...)
             }
         )
     }
