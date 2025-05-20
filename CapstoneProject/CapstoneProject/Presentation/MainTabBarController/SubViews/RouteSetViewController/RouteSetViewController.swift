@@ -25,12 +25,8 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
 
     // MARK: - UI Components
     private let routeSelectCollectionView: RouteSelectCollectionView = {
-        let flowLayout = UICollectionViewFlowLayout()
-        flowLayout.scrollDirection = .horizontal
-        flowLayout.itemSize = .init(width: UIScreen.main.bounds.width - 40, height: 140)
-        flowLayout.minimumLineSpacing = 10
-        let collectionView = RouteSelectCollectionView(frame: .zero, collectionViewLayout: flowLayout)
-        collectionView.isHidden = true
+        let collectionView = RouteSelectCollectionView()
+        collectionView.isHidden = false
         return collectionView
     }()
     
@@ -74,7 +70,6 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
         }
         viewModel.onError = { [weak self] message in
             DispatchQueue.main.async {
-                // 에러 처리 UI 띄우기
                 print("Error: \(message)")
             }
         }
@@ -164,7 +159,6 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             }
         )
     }
-
     
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if let polyline = overlay as? MKPolyline {
