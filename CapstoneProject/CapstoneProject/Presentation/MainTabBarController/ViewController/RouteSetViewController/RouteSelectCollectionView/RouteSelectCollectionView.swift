@@ -51,6 +51,10 @@ final class RouteSelectCollectionView: UICollectionView, UICollectionViewDataSou
             return UICollectionViewCell()
         }
         cell.dataBind(itemData[indexPath.item], itemRow: indexPath.item)
+        cell.layer.shadowColor = UIColor.black.cgColor
+        cell.layer.shadowOpacity = 0.3
+        cell.layer.shadowOffset = CGSize(width: 0, height: 4)
+        cell.layer.shadowRadius = 8
         return cell
     }
 

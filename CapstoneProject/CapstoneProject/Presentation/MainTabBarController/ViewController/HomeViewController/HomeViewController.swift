@@ -143,18 +143,25 @@ final class HomeViewController: UIViewController, CLLocationManagerDelegate {
     
     private func startRouting() {
         guard let address = profileViewModel.userProfile?.homeAddress,
-              let userLocation = locationViewModel.currentLocation?.coordinate else { return }
+              let userLocation = locationViewModel.currentLocation?.coordinate
+        else {
+            print("❌ 주소 또는 현재 위치가 없음")
+            return
+        }
 
         homeViewModel.resolveDestinationCoordinate(from: address)
 
         homeViewModel.$destinationCoordinate
             .compactMap { $0 }
-            .first()
-            .sink { [weak self] _ in
-                guard let self = self, let current = self.locationViewModel.currentLocation?.coordinate else { return }
+            .receive(on: RunLoop.main)
+            .sink { [weak self] destination in
+                guard let self = self,
+                      let current = self.locationViewModel.currentLocation?.coordinate else { return }
+                print("✅ 목적지 좌표 수신됨: \(destination)")
                 self.homeViewModel.drawRouteIfNeeded(on: self.mapView, from: current)
             }
             .store(in: &cancellables)
+
     }
     
     private func bindMapMarkers() {

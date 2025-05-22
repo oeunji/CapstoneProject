@@ -264,7 +264,7 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
         heatmapOverlays.removeAll()
 
         for point in points {
-            let circle = HeatmapCircle(center: point.coordinate, radius: 150)
+            let circle = HeatmapCircle(center: point.coordinate, radius: 50)
             circle.title = "heat"
             circle.safetyScore = point.avg_safety_score
             heatmapOverlays.append(circle)

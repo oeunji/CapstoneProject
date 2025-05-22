@@ -18,10 +18,6 @@ final class RouteSelectCollectionViewCell: UICollectionViewCell {
         $0.backgroundColor = UIColor.white.withAlphaComponent(0.9)
         $0.layer.cornerRadius = 24
         $0.layer.masksToBounds = false
-        $0.layer.shadowColor = UIColor.black.cgColor
-        $0.layer.shadowOpacity = 0.3
-        $0.layer.shadowOffset = CGSize(width: 0, height: 4)
-        $0.layer.shadowRadius = 8
     }
     
     private let type = UILabel().then {
