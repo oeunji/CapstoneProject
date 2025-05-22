@@ -16,7 +16,7 @@ final class LoginViewController: UIViewController {
     
     // MARK: - UI Components
     private let mainAppLogo = UIImageView().then {
-        $0.image = #imageLiteral(resourceName: "nameLogo")
+        $0.image = .nameLogo
     }
     
     private let idTextField = UITextField().then {
@@ -182,7 +182,7 @@ extension LoginViewController {
         view.backgroundColor = .white
         
         mainAppLogo.snp.makeConstraints { make in
-            make.top.equalTo(view.snp.top).offset(210)
+            make.bottom.equalTo(stackView.snp.top).offset(-5)
             make.centerX.equalToSuperview()
             make.width.equalTo(200)
             make.height.equalTo(104)

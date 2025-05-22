@@ -10,22 +10,42 @@ import SnapKit
 import FirebaseFirestore
 
 final class SignUpGuardianViewController: UIViewController {
-    private var selectedGender: String = "" // "M" or "F"
 
-    private let scrollView = UIScrollView()
+    // MARK: - Properties
+    private var selectedGender: String = ""
+
+    // MARK: - UI Componentt
+    private let scrollView = UIScrollView().then {
+        $0.keyboardDismissMode = .interactive
+        $0.alwaysBounceVertical = true
+    }
     private let contentView = UIView()
+    
+    private let logoImageView = UIImageView().then {
+        $0.image = .nameLogo
+        $0.contentMode = .scaleAspectFit
+    }
 
-    // MARK: - UI 요소
-    private lazy var nameTextField = createTextField(placeholder: "이름")
-    private lazy var usernameTextField = createTextField(placeholder: "아이디")
-    private lazy var passwordTextField = createTextField(placeholder: "비밀번호", isSecure: true)
-    private lazy var phoneNumberTextField = createTextField(placeholder: "휴대폰 번호")
-    private lazy var birthTextField = createTextField(placeholder: "생년월일 (YYYY-MM-DD)")
-    private lazy var homeAddressTextField = createTextField(placeholder: "집 주소")
-    private lazy var protectedPhoneNumberTextField = createTextField(placeholder: "피보호자 휴대폰 번호")
+    private lazy var textFields: [UITextField] = [
+        .makeTextField(placeholder: "이름"),
+        .makeTextField(placeholder: "아이디"),
+        .makeTextField(placeholder: "비밀번호", isSecure: true),
+        .makeTextField(placeholder: "휴대폰 번호"),
+        .makeTextField(placeholder: "생년월일 (YYYY-MM-DD)"),
+        .makeTextField(placeholder: "집 주소"),
+        .makeTextField(placeholder: "피보호자 휴대폰 번호")
+    ]
 
-    private lazy var maleButton: UIButton = createGenderButton(title: "남성", gender: "M")
-    private lazy var femaleButton: UIButton = createGenderButton(title: "여성", gender: "F")
+    private lazy var maleButton = makeGenderButton(title: "남성", gender: "M")
+    private lazy var femaleButton = makeGenderButton(title: "여성", gender: "F")
+    
+    private lazy var genderStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [maleButton, femaleButton])
+        stack.axis = .horizontal
+        stack.spacing = 20
+        stack.distribution = .fillEqually
+        return stack
+    }()
 
     private lazy var signUpButton: UIButton = {
         let button = UIButton(type: .custom)
@@ -38,10 +58,12 @@ final class SignUpGuardianViewController: UIViewController {
         return button
     }()
 
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        setUI()
-        setNavigationBar()
+        configureUI()
+        configureNavigationBar()
+        hideKeyboardWhenTappedAround()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -55,55 +77,15 @@ final class SignUpGuardianViewController: UIViewController {
         NotificationCenter.default.removeObserver(self)
     }
 
-    @objc private func keyboardWillShow(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
-
-        let bottomInset = keyboardFrame.height
-        scrollView.contentInset.bottom = bottomInset + 20
-        scrollView.verticalScrollIndicatorInsets.bottom = bottomInset + 20
-    }
-
-    @objc private func keyboardWillHide(_ notification: Notification) {
-        scrollView.contentInset.bottom = 0
-        scrollView.verticalScrollIndicatorInsets.bottom = 0
-    }
-
-    // MARK: - 회원가입 버튼 클릭
-    @objc private func didTapSignUpButton() {
-        guard let username = usernameTextField.text, !username.isEmpty,
-              let name = nameTextField.text, !name.isEmpty,
-              let password = passwordTextField.text, !password.isEmpty,
-              let phone = phoneNumberTextField.text, !phone.isEmpty,
-              let birthdate = birthTextField.text, !birthdate.isEmpty,
-              let homeAddress = homeAddressTextField.text, !homeAddress.isEmpty,
-              let protectedPhoneNumber = protectedPhoneNumberTextField.text, !protectedPhoneNumber.isEmpty else {
-            return
-        }
-
-        let db = Firestore.firestore()
-        let userData: [String: Any] = [
-            "username": username,
-            "name": name,
-            "password": password,
-            "phone": phone,
-            "birthdate": birthdate,
-            "gender": selectedGender,
-            "home_address": homeAddress,
-            "protected_person_phone": protectedPhoneNumber
-        ]
-
-        db.collection("guardian_users").document(username).setData(userData) { error in
-            if let error = error {
-                print("🚨 Firestore 저장 실패: \(error.localizedDescription)")
-            } else {
-                self.navigationController?.popToRootViewController(animated: true)
-            }
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        DispatchQueue.main.async {
+            self.textFields.forEach { $0.setUnderline(color: UIColor.appColor(.gray400)) }
         }
     }
 
-    // MARK: - UI 설정
-    private func setUI() {
+    // MARK: - UI Setup
+    private func configureUI() {
         view.backgroundColor = .white
 
         view.addSubview(scrollView)
@@ -115,74 +97,37 @@ final class SignUpGuardianViewController: UIViewController {
             $0.width.equalTo(scrollView.snp.width)
         }
 
-        let stackView = UIStackView(arrangedSubviews: [
-            nameTextField, usernameTextField, passwordTextField, phoneNumberTextField, birthTextField, homeAddressTextField, protectedPhoneNumberTextField, maleButton, femaleButton
-        ])
+        let stackView = UIStackView(arrangedSubviews: textFields + [genderStackView])
         stackView.axis = .vertical
-        stackView.spacing = 15
+        stackView.spacing = 20
         stackView.alignment = .fill
         stackView.distribution = .fillEqually
 
-        contentView.addSubview(stackView)
-        contentView.addSubview(signUpButton)
-
-        stackView.snp.makeConstraints { make in
-            make.top.equalTo(contentView.snp.top).offset(40)
-            make.leading.equalTo(contentView.snp.leading).offset(30)
-            make.trailing.equalTo(contentView.snp.trailing).offset(-30)
+        [logoImageView, stackView, signUpButton].forEach {
+            contentView.addSubview($0)
+        }
+        
+        logoImageView.snp.makeConstraints {
+            $0.top.equalToSuperview().offset(40)
+            $0.centerX.equalToSuperview()
+            $0.width.greaterThanOrEqualTo(150)
+            $0.height.equalTo(90)
         }
 
-        signUpButton.snp.makeConstraints { make in
-            make.top.equalTo(stackView.snp.bottom).offset(20)
-            make.leading.equalTo(contentView.snp.leading).offset(30)
-            make.trailing.equalTo(contentView.snp.trailing).offset(-30)
-            make.height.equalTo(50)
-            make.bottom.equalTo(contentView.snp.bottom).offset(-20)
+        stackView.snp.makeConstraints {
+            $0.top.equalTo(logoImageView.snp.bottom).offset(10)
+            $0.leading.trailing.equalToSuperview().inset(30)
+        }
+
+        signUpButton.snp.makeConstraints {
+            $0.top.equalTo(stackView.snp.bottom).offset(20)
+            $0.leading.trailing.equalToSuperview().inset(30)
+            $0.height.equalTo(50)
+            $0.bottom.equalToSuperview().offset(-20)
         }
     }
 
-    private func createTextField(placeholder: String, isSecure: Bool = false) -> UITextField {
-        let textField = UITextField()
-        textField.placeholder = placeholder
-        textField.isSecureTextEntry = isSecure
-        textField.textColor = .black
-        textField.tintColor = .black
-        textField.font = UIFont.appFont(.pretendardRegular, size: 18)
-        textField.layer.borderWidth = 1.0
-        textField.layer.borderColor = UIColor.lightGray.cgColor
-        textField.layer.cornerRadius = 5
-        textField.backgroundColor = .white
-        textField.autocapitalizationType = .none
-        textField.autocorrectionType = .no
-        textField.spellCheckingType = .no
-        textField.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 0))
-        textField.leftViewMode = .always
-        return textField
-    }
-
-    private func createGenderButton(title: String, gender: String) -> UIButton {
-        let button = UIButton(type: .custom)
-        button.setTitle(title, for: .normal)
-        button.setTitleColor(.black, for: .normal)
-        button.backgroundColor = .white
-        button.layer.borderColor = UIColor.lightGray.cgColor
-        button.layer.borderWidth = 1.0
-        button.layer.cornerRadius = 5
-        button.titleLabel?.font = UIFont.appFont(.pretendardRegular, size: 18)
-        button.addTarget(self, action: #selector(didTapGenderButton(_:)), for: .touchUpInside)
-        button.tag = gender == "M" ? 1 : 2
-        return button
-    }
-
-    @objc private func didTapGenderButton(_ sender: UIButton) {
-        selectedGender = sender.tag == 1 ? "M" : "F"
-        maleButton.backgroundColor = sender.tag == 1 ? .darkGray : .white
-        femaleButton.backgroundColor = sender.tag == 2 ? .darkGray : .white
-    }
-}
-
-extension SignUpGuardianViewController {
-    private func setNavigationBar() {
+    private func configureNavigationBar() {
         let appearance = UINavigationBarAppearance()
         appearance.backgroundColor = UIColor.appColor(.mainTheme)
         appearance.titleTextAttributes = [
@@ -192,6 +137,7 @@ extension SignUpGuardianViewController {
         navigationController?.navigationBar.standardAppearance = appearance
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
         navigationController?.navigationBar.tintColor = .white
+
         navigationItem.title = "보호자 회원가입"
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             image: UIImage(systemName: "chevron.left"),
@@ -201,7 +147,68 @@ extension SignUpGuardianViewController {
         )
     }
 
+    private func makeGenderButton(title: String, gender: String) -> UIButton {
+        let button = UIButton(type: .custom)
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.black, for: .normal)
+        button.backgroundColor = .white
+        button.layer.borderColor = UIColor.appColor(.gray400).cgColor
+        button.layer.borderWidth = 1.0
+        button.layer.cornerRadius = 5
+        button.titleLabel?.font = UIFont.appFont(.pretendardRegular, size: 18)
+        button.tag = gender == "M" ? 1 : 2
+        button.addTarget(self, action: #selector(didTapGenderButton(_:)), for: .touchUpInside)
+        return button
+    }
+}
+
+// MARK: - @objc
+extension SignUpGuardianViewController {
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+
+        let bottomInset = keyboardFrame.height
+        scrollView.contentInset.bottom = bottomInset + 20
+        scrollView.scrollIndicatorInsets.bottom = bottomInset + 20
+
+        if let activeField = view.currentFirstResponder() as? UIView {
+            let visibleRect = scrollView.convert(activeField.frame, from: activeField.superview)
+            scrollView.scrollRectToVisible(visibleRect, animated: true)
+        }
+    }
+    
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        scrollView.contentInset.bottom = 0
+        scrollView.verticalScrollIndicatorInsets.bottom = 0
+    }
+
+    @objc private func didTapSignUpButton() {
+        let values = textFields.compactMap { $0.text?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard values.count == 7, !values.contains(where: { $0.isEmpty }) else { return }
+
+        let db = Firestore.firestore()
+        let keys = ["name", "username", "password", "phone", "birthdate", "home_address", "protected_person_phone"]
+        let userData = Dictionary(uniqueKeysWithValues: zip(keys, values))
+        var finalData = userData
+        finalData["gender"] = selectedGender
+
+        db.collection("guardian_users").document(values[1]).setData(finalData) { error in
+            if let error = error {
+                print("🚨 Firestore 저장 실패: \(error.localizedDescription)")
+            } else {
+                self.navigationController?.popToRootViewController(animated: true)
+            }
+        }
+    }
+
     @objc private func didTapLeftBarButton() {
         navigationController?.popViewController(animated: true)
+    }
+    
+    @objc private func didTapGenderButton(_ sender: UIButton) {
+        selectedGender = sender.tag == 1 ? "M" : "F"
+        maleButton.backgroundColor = sender.tag == 1 ? UIColor.appColor(.mainYellow) : .white
+        femaleButton.backgroundColor = sender.tag == 2 ? UIColor.appColor(.mainYellow) : .white
     }
 }
