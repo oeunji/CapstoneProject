@@ -22,7 +22,9 @@ final class RouteSetViewModel {
     private let timeZoneViewModel = TimeZoneViewModel()
 
     // MARK: - Node ID 요청
-    private func postCoordinate(lat: Double, lng: Double, completion: @escaping (String?) -> Void) {
+    private func postCoordinate(lat: Double,
+                                lng: Double,
+                                completion: @escaping (String?) -> Void) {
         let url = "\(Config.baseURL)/find_or_create_node"
         let parameters: [String: Any] = ["lat": lat, "lng": lng]
 
@@ -85,7 +87,8 @@ final class RouteSetViewModel {
         requestRouteFlow(startCoordinate: startCoordinate, endCoordinate: endCoordinate, mode: mode, completion: completion)
     }
 
-    func requestAllRoutes(startCoordinate: CLLocationCoordinate2D, endCoordinate: CLLocationCoordinate2D) {
+    func requestAllRoutes(startCoordinate: CLLocationCoordinate2D,
+                          endCoordinate: CLLocationCoordinate2D) {
         var results: [RouteDTO?] = [nil, nil]
         let group = DispatchGroup()
 

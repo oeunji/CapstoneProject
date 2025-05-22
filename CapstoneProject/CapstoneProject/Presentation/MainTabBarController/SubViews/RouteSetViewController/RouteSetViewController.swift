@@ -23,6 +23,7 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     private let routeSearchResultView = SearchResultTableView()
     private var currentUserCoordinate: CLLocationCoordinate2D?
     private let timeZoneViewModel = TimeZoneViewModel()
+    private let heatmapViewModel = HeatmapViewModel()
 
     // MARK: - UI Components
     private let routeSelectCollectionView: RouteSelectCollectionView = {
@@ -84,6 +85,21 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
                 print("Error: \(message)")
             }
         }
+        
+        heatmapViewModel.onHeatmapDataReceived = { [weak self] points in
+            DispatchQueue.main.async {
+                guard !points.isEmpty else {
+                    print("⚠️ 히트맵 데이터가 없습니다.")
+                    return
+                }
+                self?.drawHeatmap(points: points)
+            }
+        }
+
+        heatmapViewModel.onError = { message in
+            print("❌ Heatmap 에러: \(message)")
+        }
+
     }
     
     // MARK: - Setup
@@ -131,6 +147,7 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     private func drawRoute(coordinates: [CLLocationCoordinate2D], distance: Double) {
         let km = distance / 1000.0
         let time = Int(distance / 75.0)
+
 
         DispatchQueue.main.async {
             self.mapView.removeOverlays(self.mapView.overlays)
@@ -187,7 +204,51 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             renderer.lineWidth = 4
             return renderer
         }
+
+        if let circle = overlay as? HeatmapCircle, circle.title == "heat" {
+            let renderer = MKCircleRenderer(circle: circle)
+
+            let score = circle.safetyScore
+            print("🎯 safetyScore: \(score)")
+
+            let color: UIColor
+            switch score {
+            case 0.9...1.0:
+                color = UIColor.red.withAlphaComponent(0.3)
+            case 0.8..<0.9:
+                color = UIColor.systemTeal.withAlphaComponent(0.3)
+            case 0.7..<0.8:
+                color = UIColor.systemPink.withAlphaComponent(0.3)
+            case 0.6..<0.7:
+                color = UIColor.orange.withAlphaComponent(0.3)
+            case 0.5..<0.6:
+                color = UIColor.yellow.withAlphaComponent(0.3)
+            default:
+                color = UIColor.green.withAlphaComponent(0.3)
+            }
+
+            renderer.fillColor = color
+            renderer.strokeColor = .clear
+            return renderer
+        }
+
         return MKOverlayRenderer()
+    }
+
+    
+    // MARK: - Draw Heat Map
+    private func drawHeatmap(points: [HeatmapPoint]) {
+        // 기존 heatmap 원 제거
+        let oldHeatmapOverlays = mapView.overlays.filter { $0 is MKCircle && $0.title == "heat" }
+        mapView.removeOverlays(oldHeatmapOverlays)
+
+        // 새로운 heatmap 원 추가
+        for point in points {
+            let circle = HeatmapCircle(center: point.coordinate, radius: 150)
+            circle.title = "heat"
+            circle.safetyScore = point.avg_safety_score
+            mapView.addOverlay(circle)
+        }
     }
 }
 
@@ -199,6 +260,8 @@ extension RouteSetViewController: RouteSelectCollectionViewDelegate {
     func didSelectRouteItem(_ route: RouteDTO) {
         let distanceValue = Double(route.distance.replacingOccurrences(of: "km", with: "")) ?? 0
         let distanceInMeter = distanceValue * 1000
+        heatmapViewModel.fetchHeatmap(path: route.coordinates, mode: route.mode)
+
         drawRoute(coordinates: route.coordinates, distance: distanceInMeter)
         print("✅ \(route.mode) 경로를 지도에 다시 출력했습니다.")
         routeSelectCollectionView.isHidden = true
