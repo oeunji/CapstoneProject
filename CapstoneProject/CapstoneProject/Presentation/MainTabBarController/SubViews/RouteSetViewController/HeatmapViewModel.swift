@@ -47,12 +47,11 @@ final class HeatmapViewModel {
                     self.onError?("Heatmap 요청 실패")
                 }
             }
-
     }
 
     private let timeoutSession: Session = {
         let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 240 // ✅ 3분까지 허용
+        configuration.timeoutIntervalForRequest = 240
         configuration.timeoutIntervalForResource = 240
         return Session(configuration: configuration)
     }()

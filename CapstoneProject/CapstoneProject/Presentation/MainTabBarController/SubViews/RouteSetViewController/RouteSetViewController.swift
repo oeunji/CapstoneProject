@@ -24,6 +24,9 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     private var currentUserCoordinate: CLLocationCoordinate2D?
     private let timeZoneViewModel = TimeZoneViewModel()
     private let heatmapViewModel = HeatmapViewModel()
+    private var heatmapOverlays: [MKOverlay] = []
+    private var isHeatmapVisible = true
+
 
     // MARK: - UI Components
     private let routeSelectCollectionView: RouteSelectCollectionView = {
@@ -40,13 +43,27 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
         $0.isHidden = true
     }
     
+    private let heatmapOnOffButton = UIButton(type: .custom).then {
+        let config = UIImage.SymbolConfiguration(pointSize: 50, weight: .regular)
+        let image = UIImage(systemName: "figure.walk.circle.fill", withConfiguration: config)
+        $0.setImage(image, for: .normal)
+        $0.tintColor = UIColor.appColor(.mainRed)
+        $0.imageView?.contentMode = .scaleAspectFit
+        $0.contentHorizontalAlignment = .fill
+        $0.contentVerticalAlignment = .fill
+        $0.isHidden = true
+    }
+    
     // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
         routeSearchBar.placeholder = "목적지를 검색하세요"
         navigationItem.titleView = routeSearchBar
+        
+        setButtonTarget()
         setupMap()
+        
         configureUI()
         configureConstraints()
         configureSearch()
@@ -93,6 +110,7 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
                     return
                 }
                 self?.drawHeatmap(points: points)
+                self?.heatmapOnOffButton.isHidden = false
             }
         }
 
@@ -103,6 +121,10 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     }
     
     // MARK: - Setup
+    private func setButtonTarget() {
+        heatmapOnOffButton.addTarget(self, action: #selector(toggleHeatmapVisibility), for: .touchUpInside)
+    }
+    
     private func setupMap() {
         mapView.delegate = self
         mapView.showsUserLocation = true
@@ -238,22 +260,33 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     
     // MARK: - Draw Heat Map
     private func drawHeatmap(points: [HeatmapPoint]) {
-        // 기존 heatmap 원 제거
-        let oldHeatmapOverlays = mapView.overlays.filter { $0 is MKCircle && $0.title == "heat" }
-        mapView.removeOverlays(oldHeatmapOverlays)
+        mapView.removeOverlays(heatmapOverlays)
+        heatmapOverlays.removeAll()
 
-        // 새로운 heatmap 원 추가
         for point in points {
             let circle = HeatmapCircle(center: point.coordinate, radius: 150)
             circle.title = "heat"
             circle.safetyScore = point.avg_safety_score
-            mapView.addOverlay(circle)
+            heatmapOverlays.append(circle)
+        }
+
+        if isHeatmapVisible {
+            mapView.addOverlays(heatmapOverlays)
         }
     }
 }
 
 // MARK: - @objc
 extension RouteSetViewController {
+    @objc private func toggleHeatmapVisibility() {
+        if isHeatmapVisible {
+            mapView.removeOverlays(heatmapOverlays)
+        } else {
+            mapView.addOverlays(heatmapOverlays)
+        }
+        isHeatmapVisible.toggle()
+    }
+
 }
 
 extension RouteSetViewController: RouteSelectCollectionViewDelegate {
@@ -333,7 +366,10 @@ extension RouteSetViewController {
     private func configureUI() {
         view.addSubview(mapView)
         
-        [routeSearchResultView, routeSelectCollectionView, timeLabel].forEach {
+        [routeSearchResultView,
+         routeSelectCollectionView,
+         timeLabel,
+         heatmapOnOffButton].forEach {
             view.addSubview($0)
         }
     }
@@ -358,6 +394,12 @@ extension RouteSetViewController {
         timeLabel.snp.makeConstraints {
             $0.top.equalTo(view.safeAreaLayoutGuide).offset(10)
             $0.leading.trailing.equalToSuperview().inset(20)
+        }
+        
+        heatmapOnOffButton.snp.makeConstraints {
+            $0.trailing.equalToSuperview().offset(-20)
+            $0.width.height.equalTo(50)
+            $0.bottom.equalTo(view.safeAreaLayoutGuide).offset(-30)
         }
     }
 }
