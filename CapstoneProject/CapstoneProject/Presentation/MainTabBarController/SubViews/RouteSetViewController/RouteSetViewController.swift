@@ -23,6 +23,10 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     private let routeSearchResultView = SearchResultTableView()
     private var currentUserCoordinate: CLLocationCoordinate2D?
     private let timeZoneViewModel = TimeZoneViewModel()
+    private let heatmapViewModel = HeatmapViewModel()
+    private var heatmapOverlays: [MKOverlay] = []
+    private var isHeatmapVisible = true
+
 
     // MARK: - UI Components
     private let routeSelectCollectionView: RouteSelectCollectionView = {
@@ -39,13 +43,27 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
         $0.isHidden = true
     }
     
+    private let heatmapOnOffButton = UIButton(type: .custom).then {
+        let config = UIImage.SymbolConfiguration(pointSize: 50, weight: .regular)
+        let image = UIImage(systemName: "figure.walk.circle.fill", withConfiguration: config)
+        $0.setImage(image, for: .normal)
+        $0.tintColor = UIColor.appColor(.mainRed)
+        $0.imageView?.contentMode = .scaleAspectFit
+        $0.contentHorizontalAlignment = .fill
+        $0.contentVerticalAlignment = .fill
+        $0.isHidden = true
+    }
+    
     // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
         routeSearchBar.placeholder = "목적지를 검색하세요"
         navigationItem.titleView = routeSearchBar
+        
+        setButtonTarget()
         setupMap()
+        
         configureUI()
         configureConstraints()
         configureSearch()
@@ -84,9 +102,29 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
                 print("Error: \(message)")
             }
         }
+        
+        heatmapViewModel.onHeatmapDataReceived = { [weak self] points in
+            DispatchQueue.main.async {
+                guard !points.isEmpty else {
+                    print("⚠️ 히트맵 데이터가 없습니다.")
+                    return
+                }
+                self?.drawHeatmap(points: points)
+                self?.heatmapOnOffButton.isHidden = false
+            }
+        }
+
+        heatmapViewModel.onError = { message in
+            print("❌ Heatmap 에러: \(message)")
+        }
+
     }
     
     // MARK: - Setup
+    private func setButtonTarget() {
+        heatmapOnOffButton.addTarget(self, action: #selector(toggleHeatmapVisibility), for: .touchUpInside)
+    }
+    
     private func setupMap() {
         mapView.delegate = self
         mapView.showsUserLocation = true
@@ -131,6 +169,7 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
     private func drawRoute(coordinates: [CLLocationCoordinate2D], distance: Double) {
         let km = distance / 1000.0
         let time = Int(distance / 75.0)
+
 
         DispatchQueue.main.async {
             self.mapView.removeOverlays(self.mapView.overlays)
@@ -187,18 +226,75 @@ final class RouteSetViewController: UIViewController, MKMapViewDelegate {
             renderer.lineWidth = 4
             return renderer
         }
+
+        if let circle = overlay as? HeatmapCircle, circle.title == "heat" {
+            let renderer = MKCircleRenderer(circle: circle)
+
+            let score = circle.safetyScore
+            print("🎯 safetyScore: \(score)")
+
+            let color: UIColor
+            switch score {
+            case 0.9...1.0:
+                color = UIColor.red.withAlphaComponent(0.3)
+            case 0.8..<0.9:
+                color = UIColor.systemTeal.withAlphaComponent(0.3)
+            case 0.7..<0.8:
+                color = UIColor.systemPink.withAlphaComponent(0.3)
+            case 0.6..<0.7:
+                color = UIColor.orange.withAlphaComponent(0.3)
+            case 0.5..<0.6:
+                color = UIColor.yellow.withAlphaComponent(0.3)
+            default:
+                color = UIColor.green.withAlphaComponent(0.3)
+            }
+
+            renderer.fillColor = color
+            renderer.strokeColor = .clear
+            return renderer
+        }
+
         return MKOverlayRenderer()
+    }
+
+    
+    // MARK: - Draw Heat Map
+    private func drawHeatmap(points: [HeatmapPoint]) {
+        mapView.removeOverlays(heatmapOverlays)
+        heatmapOverlays.removeAll()
+
+        for point in points {
+            let circle = HeatmapCircle(center: point.coordinate, radius: 150)
+            circle.title = "heat"
+            circle.safetyScore = point.avg_safety_score
+            heatmapOverlays.append(circle)
+        }
+
+        if isHeatmapVisible {
+            mapView.addOverlays(heatmapOverlays)
+        }
     }
 }
 
 // MARK: - @objc
 extension RouteSetViewController {
+    @objc private func toggleHeatmapVisibility() {
+        if isHeatmapVisible {
+            mapView.removeOverlays(heatmapOverlays)
+        } else {
+            mapView.addOverlays(heatmapOverlays)
+        }
+        isHeatmapVisible.toggle()
+    }
+
 }
 
 extension RouteSetViewController: RouteSelectCollectionViewDelegate {
     func didSelectRouteItem(_ route: RouteDTO) {
         let distanceValue = Double(route.distance.replacingOccurrences(of: "km", with: "")) ?? 0
         let distanceInMeter = distanceValue * 1000
+        heatmapViewModel.fetchHeatmap(path: route.coordinates, mode: route.mode)
+
         drawRoute(coordinates: route.coordinates, distance: distanceInMeter)
         print("✅ \(route.mode) 경로를 지도에 다시 출력했습니다.")
         routeSelectCollectionView.isHidden = true
@@ -270,7 +366,10 @@ extension RouteSetViewController {
     private func configureUI() {
         view.addSubview(mapView)
         
-        [routeSearchResultView, routeSelectCollectionView, timeLabel].forEach {
+        [routeSearchResultView,
+         routeSelectCollectionView,
+         timeLabel,
+         heatmapOnOffButton].forEach {
             view.addSubview($0)
         }
     }
@@ -295,6 +394,12 @@ extension RouteSetViewController {
         timeLabel.snp.makeConstraints {
             $0.top.equalTo(view.safeAreaLayoutGuide).offset(10)
             $0.leading.trailing.equalToSuperview().inset(20)
+        }
+        
+        heatmapOnOffButton.snp.makeConstraints {
+            $0.trailing.equalToSuperview().offset(-20)
+            $0.width.height.equalTo(50)
+            $0.bottom.equalTo(view.safeAreaLayoutGuide).offset(-30)
         }
     }
 }
