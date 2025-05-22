@@ -15,7 +15,10 @@ final class SignUpGuardianViewController: UIViewController {
     private var selectedGender: String = ""
 
     // MARK: - UI Componentt
-    private let scrollView = UIScrollView()
+    private let scrollView = UIScrollView().then {
+        $0.keyboardDismissMode = .interactive
+        $0.alwaysBounceVertical = true
+    }
     private let contentView = UIView()
     
     private let logoImageView = UIImageView().then {
@@ -60,6 +63,7 @@ final class SignUpGuardianViewController: UIViewController {
         super.viewDidLoad()
         configureUI()
         configureNavigationBar()
+        hideKeyboardWhenTappedAround()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -143,16 +147,37 @@ final class SignUpGuardianViewController: UIViewController {
         )
     }
 
-    // MARK: - Actions
+    private func makeGenderButton(title: String, gender: String) -> UIButton {
+        let button = UIButton(type: .custom)
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.black, for: .normal)
+        button.backgroundColor = .white
+        button.layer.borderColor = UIColor.appColor(.gray400).cgColor
+        button.layer.borderWidth = 1.0
+        button.layer.cornerRadius = 5
+        button.titleLabel?.font = UIFont.appFont(.pretendardRegular, size: 18)
+        button.tag = gender == "M" ? 1 : 2
+        button.addTarget(self, action: #selector(didTapGenderButton(_:)), for: .touchUpInside)
+        return button
+    }
+}
+
+// MARK: - @objc
+extension SignUpGuardianViewController {
     @objc private func keyboardWillShow(_ notification: Notification) {
         guard let userInfo = notification.userInfo,
               let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
 
         let bottomInset = keyboardFrame.height
         scrollView.contentInset.bottom = bottomInset + 20
-        scrollView.verticalScrollIndicatorInsets.bottom = bottomInset + 20
-    }
+        scrollView.scrollIndicatorInsets.bottom = bottomInset + 20
 
+        if let activeField = view.currentFirstResponder() as? UIView {
+            let visibleRect = scrollView.convert(activeField.frame, from: activeField.superview)
+            scrollView.scrollRectToVisible(visibleRect, animated: true)
+        }
+    }
+    
     @objc private func keyboardWillHide(_ notification: Notification) {
         scrollView.contentInset.bottom = 0
         scrollView.verticalScrollIndicatorInsets.bottom = 0
@@ -180,21 +205,7 @@ final class SignUpGuardianViewController: UIViewController {
     @objc private func didTapLeftBarButton() {
         navigationController?.popViewController(animated: true)
     }
-
-    private func makeGenderButton(title: String, gender: String) -> UIButton {
-        let button = UIButton(type: .custom)
-        button.setTitle(title, for: .normal)
-        button.setTitleColor(.black, for: .normal)
-        button.backgroundColor = .white
-        button.layer.borderColor = UIColor.appColor(.gray400).cgColor
-        button.layer.borderWidth = 1.0
-        button.layer.cornerRadius = 5
-        button.titleLabel?.font = UIFont.appFont(.pretendardRegular, size: 18)
-        button.tag = gender == "M" ? 1 : 2
-        button.addTarget(self, action: #selector(didTapGenderButton(_:)), for: .touchUpInside)
-        return button
-    }
-
+    
     @objc private func didTapGenderButton(_ sender: UIButton) {
         selectedGender = sender.tag == 1 ? "M" : "F"
         maleButton.backgroundColor = sender.tag == 1 ? UIColor.appColor(.mainYellow) : .white
