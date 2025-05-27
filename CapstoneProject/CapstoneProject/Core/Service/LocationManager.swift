@@ -53,11 +53,6 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
 
-//    private func getCurrentUserId() -> String? {
-//        // 예시: KeyChain 또는 FirebaseAuth에서 UID 불러오기
-//        return UserDefaults.standard.string(forKey: "loggedInUsername") // 또는 FirebaseAuth.auth().currentUser?.uid
-//    }
-    // FIXME: -
     private func getCurrentUserId() -> String? {
         return "test_user_001" // 임시 사용자 ID
     }

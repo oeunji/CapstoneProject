@@ -53,7 +53,7 @@ extension UITextField {
     
     static func makeTextField(placeholder: String, isSecure: Bool = false) -> UITextField {
         let textField = UITextField()
-        textField.placeholder = placeholder
+        textField.setCustomPlaceholder(text: placeholder, textColor: .black, font: UIFont.appFont(.pretendardRegular, size: 17))
         textField.isSecureTextEntry = isSecure
         textField.configureDefaultTextField()
         textField.textColor = .black
