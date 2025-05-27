@@ -18,7 +18,6 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.allowsBackgroundLocationUpdates = true
         locationManager.pausesLocationUpdatesAutomatically = false
     }
 
@@ -54,7 +53,6 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     private func getCurrentUserId() -> String? {
-        return "test_user_001" // 임시 사용자 ID
+        return "test_user_001"
     }
-
 }

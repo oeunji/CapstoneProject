@@ -13,6 +13,8 @@ final class MainTabBarController: UITabBarController {
         super.viewDidLoad()
         configureController()
         setupTabBarAppearance()
+        
+        LocationManager.shared.startUpdatingLocation()
     }
 
     private func configureController() {

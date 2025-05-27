@@ -26,8 +26,4 @@ final class LocationViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
-    func startLocationTracking() {
-        LocationManager.shared.startUpdatingLocation()
-    }
 }
